@@ -79,14 +79,12 @@ class MapComponent extends React.Component {
 
   createNewSeason = async () => {
     try {
-      const seeds = this.state.polygons.map(polygon => ({
-        id: polygon.id,
-        field_type: this.state.selectedFieldTypes[polygon.id] || 'Пшеница' // Установите тип по умолчанию, если не выбран
-      }));
-
       const response = await axios.post('http://appi.test/api/seasons', {
         name: this.state.newSeasonName,
-        seeds: seeds
+        seeds: this.state.polygons.map(polygon => ({
+          id: polygon.id,
+          field_type: this.state.selectedFieldTypes[polygon.id] || 'Пшеница'
+        }))
       });
 
       this.setState(prevState => ({
@@ -96,6 +94,11 @@ class MapComponent extends React.Component {
       }));
     } catch (error) {
       console.error('Ошибка при создании нового сезона:', error);
+      if (error.response && error.response.data) {
+        alert(`Ошибка: ${error.response.data.message}`);
+      } else {
+        alert(`Ошибка: ${error.message}`);
+      }
     }
   };
 
@@ -254,7 +257,9 @@ class MapComponent extends React.Component {
 
     return (
       <div style={{ position: 'relative', height: '100vh', width: '100vw' }}>
-        <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 1000, background: 'white', padding: '10px', borderRadius: '5px' }}>
+        {/* Блок для управления сезонами */}
+        <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 1000, background: 'white', padding: '10px', borderRadius: '5px' }}>
+          <h3>Управление сезонами</h3>
           <select onChange={this.handleSeasonChange} value={this.state.currentSeasonId || ''}>
             <option value="" disabled>Выберите сезон</option>
             {this.state.seasons.map(season => (
@@ -268,6 +273,10 @@ class MapComponent extends React.Component {
             onChange={(e) => this.setState({ newSeasonName: e.target.value })}
           />
           <button onClick={this.createNewSeason}>Создать новый сезон</button>
+        </div>
+
+        {/* Основной блок управления картой */}
+        <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 1000, background: 'white', padding: '10px', borderRadius: '5px' }}>
           <input
             type="text"
             placeholder='Введите координаты в формате "lat lng", разделенные запятыми'
@@ -275,12 +284,13 @@ class MapComponent extends React.Component {
             onChange={this.handleInputChange}
             style={{ width: '300px', marginRight: '10px' }}
           />
-          <button onClick={this.addPolygon}>Сохранить заливку</button>
+          <button onClick={this.addPolygon}>Нажми для сохранения заливки</button>
           <button onClick={this.clearMarkers}>Очистить маркеры</button>
           <button onClick={this.toggleCreationMode}>
             {this.state.creationMode ? 'Выключить режим заливки' : 'Включить режим заливки'}
           </button>
         </div>
+
         <Map
           zoomControl={false}
           zoom={this.state.zoom}

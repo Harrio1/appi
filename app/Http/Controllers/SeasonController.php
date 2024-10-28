@@ -3,53 +3,35 @@
 namespace App\Http\Controllers;
 
 use App\Models\Season;
-use App\Models\SeasonPolygonSeed;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 
 class SeasonController extends Controller
 {
     public function index()
     {
-        try {
-            $seasons = Season::with('polygonSeeds')->get();
-            return response()->json($seasons);
-        } catch (\Exception $e) {
-            Log::error('Ошибка при загрузке сезонов: ' . $e->getMessage());
-            return response()->json(['error' => 'Ошибка при загрузке сезонов'], 500);
-        }
+        $seasons = Season::all();
+        return response()->json($seasons);
     }
 
     public function createNewSeason(Request $request)
     {
-        try {
-            $validatedData = $request->validate([
-                'name' => 'required|string|max:255',
-                'seeds' => 'nullable|array' // Валидация для семян
-            ]);
+        // Валидация входящих данных
+        $validatedData = $request->validate([
+            'name' => 'required|string',
+            'seeds' => 'required|array|min:1', // Убедитесь, что массив не пустой
+        ]);
 
-            Log::info('Validated data:', $validatedData);
+        // Создание нового сезона
+        $season = new Season();
+        $season->name = $validatedData['name'];
+        $season->save();
 
-            $season = Season::create([
-                'name' => $validatedData['name']
-            ]);
-
-            if (!empty($validatedData['seeds'])) {
-                foreach ($validatedData['seeds'] as $polygonId => $seedType) {
-                    SeasonPolygonSeed::create([
-                        'season_id' => $season->id,
-                        'polygon_id' => $polygonId,
-                        'seed_type' => $seedType
-                    ]);
-                }
-            }
-
-            Log::info('Сезон успешно создан:', $season);
-
-            return response()->json($season);
-        } catch (\Exception $e) {
-            Log::error('Ошибка при создании сезона: ' . $e->getMessage());
-            return response()->json(['error' => 'Ошибка при создании сезона'], 500);
+        // Логика для обработки seeds, если необходимо
+        foreach ($validatedData['seeds'] as $seed) {
+            // Пример обработки каждого элемента seeds
+            // $seed['id'] и $seed['field_type'] могут быть использованы здесь
         }
+
+        return response()->json($season);
     }
 }

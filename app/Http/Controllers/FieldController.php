@@ -41,12 +41,7 @@ class FieldController extends Controller
         return response()->json($formattedPolygons);
     }
 
-    // public function create(Request $request)
-    // {
-    //     // Обработка данных, полученных от клиента
-    //     return response()->json(['message' => 'Data saved successfully']);
-    // }
-
+   
     public function storeField(Request $request)
     {
         try {
