@@ -5,19 +5,19 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Field extends Model
+class SeasonPolygonSeed extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['season_id', 'coordinates', 'color', 'name', 'field_type'];
+    protected $fillable = ['season_id', 'polygon_id', 'seed_type'];
 
     public function season()
     {
         return $this->belongsTo(Season::class);
     }
 
-    public function seasonSeeds()
+    public function polygon()
     {
-        return $this->hasMany(SeasonPolygonSeed::class);
+        return $this->belongsTo(Field::class);
     }
 }

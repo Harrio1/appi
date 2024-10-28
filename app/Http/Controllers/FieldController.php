@@ -13,17 +13,29 @@ class FieldController extends Controller
         // Предположим, что вы хотите вернуть все полигоны
         $polygonsData = Field::all();
 
-        // Преобразование данных в нужный формт
+        // Преобразование данных в нужный формат
         $formattedPolygons = $polygonsData->map(function($polygon) {
+            $coordinates = array_map(function($coord) {
+                $coords = explode(' ', $coord);
+                if (count($coords) == 2) {
+                    return array_map('floatval', $coords);
+                } else {
+                    Log::error('Некорректные координаты: ' . $coord);
+                    return null;
+                }
+            }, explode(',', $polygon->coordinates));
+
             return [
                 'id' => $polygon->id,
-                'coordinates' => array_map(function($coord) {
-                    return array_map('floatval', explode(' ', $coord));
-                }, explode(',', $polygon->coordinates)),
+                'coordinates' => array_filter($coordinates), // Убедитесь, что фильтруете null значения
                 'color' => $polygon->color,
                 'name' => $polygon->name
             ];
+        })->filter(function($polygon) {
+            return !empty($polygon['coordinates']);
         });
+
+        Log::info('Отформатированные полигоны:', $formattedPolygons->toArray());
 
         // Возвращаем данные в формате JSON
         return response()->json($formattedPolygons);

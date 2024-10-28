@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\FieldController;
+use App\Http\Controllers\SeasonController;
 
 /*
 |--------------------------------------------------------------------------
@@ -21,4 +22,10 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::get('/fields', [FieldController::class, 'index']);
 Route::post('/fields', [FieldController::class, 'storeField']);
+
+Route::get('/seasons', [SeasonController::class, 'index']);
+Route::post('/seasons', [SeasonController::class, 'createNewSeason']);
+
+Route::get('/seasons/{season}/fields', [FieldController::class, 'index']);
+Route::post('/seasons/{season}/fields', [FieldController::class, 'storeField']);
 
