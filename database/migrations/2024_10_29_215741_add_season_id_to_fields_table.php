@@ -11,14 +11,6 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('fields', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->text('coordinates'); // Храните координаты в виде строки или JSON
-            $table->string('color');
-            $table->timestamps();
-        });
-
         Schema::table('fields', function (Blueprint $table) {
             $table->unsignedBigInteger('season_id')->nullable();
 
@@ -32,6 +24,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('fields');
+        Schema::table('fields', function (Blueprint $table) {
+            $table->dropForeign(['season_id']);
+            $table->dropColumn('season_id');
+        });
     }
 };
