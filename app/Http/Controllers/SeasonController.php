@@ -15,23 +15,11 @@ class SeasonController extends Controller
 
     public function createNewSeason(Request $request)
     {
-        // Валидация входящих данных
         $validatedData = $request->validate([
             'name' => 'required|string',
-            'seeds' => 'required|array|min:1', // Убедитесь, что массив не пустой
+            'seeds' => 'required|array', // Убедитесь, что это поле указано как обязательное
         ]);
 
-        // Создание нового сезона
-        $season = new Season();
-        $season->name = $validatedData['name'];
-        $season->save();
-
-        // Логика для обработки seeds, если необходимо
-        foreach ($validatedData['seeds'] as $seed) {
-            // Пример обработки каждого элемента seeds
-            // $seed['id'] и $seed['field_type'] могут быть использованы здесь
-        }
-
-        return response()->json($season);
+        // Логика для создания нового сезона
     }
 }

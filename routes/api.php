@@ -1,9 +1,10 @@
- <?php
+<?php
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\FieldController;
 use App\Http\Controllers\SeasonController;
+use App\Http\Controllers\SeedController;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,4 +28,15 @@ Route::get('/seasons/{season}/fields', [FieldController::class, 'index']);
 Route::post('/seasons/{season}/fields', [FieldController::class, 'storeField']);
 
 Route::put('/fields/{field}', [FieldController::class, 'updateFieldType']);
+Route::put('/fields/{id}', [FieldController::class, 'update']);
+Route::delete('/fields/{id}', [FieldController::class, 'destroy']);
+
+Route::get('/seeds', [SeedController::class, 'index']);
+
+Route::get('/fields', [FieldController::class, 'index']);
+Route::post('/fields', [FieldController::class, 'storeField']);
+
+Route::post('/properties', [FieldController::class, 'storeProperty']);
+
+Route::post('/fields/by-name', [FieldController::class, 'getPolygonsByName']);
 

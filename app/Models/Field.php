@@ -9,15 +9,10 @@ class Field extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['season_id', 'coordinates', 'color', 'name', 'field_type'];
+    protected $fillable = ['name', 'coordinates', 'area'];
 
-    public function season()
+    public function properties()
     {
-        return $this->belongsTo(Season::class);
-    }
-
-    public function seasonSeeds()
-    {
-        return $this->hasMany(SeasonPolygonSeed::class);
+        return $this->hasMany(Property::class);
     }
 }

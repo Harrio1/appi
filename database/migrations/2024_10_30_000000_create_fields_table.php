@@ -6,23 +6,19 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('seasons', function (Blueprint $table) {
+        Schema::create('fields', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->string('name'); // Название поля
+            $table->text('coordinates'); // Координаты поля
+            $table->float('area'); // Площадь поля
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('seasons');
+        Schema::dropIfExists('fields');
     }
 }; 

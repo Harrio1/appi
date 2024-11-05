@@ -32,3 +32,16 @@
   background: rgba(255, 255, 255, 0.2);
   margin: 16px;
 }
+
+.polygon-tooltip {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: black; /* Цвет текста */
+  font-weight: bold; /* Жирный текст */
+  font-size: 14px; /* Размер текста */
+  text-align: center; /* Центрирование текста */
+  white-space: nowrap; /* Запрет на перенос текста */
+  overflow: hidden; /* Скрытие переполнения */
+  text-overflow: ellipsis; /* Добавление многоточия для длинного текста */
+}

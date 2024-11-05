@@ -6,23 +6,17 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('seasons', function (Blueprint $table) {
+        Schema::create('seeds', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->string('name'); // Название семени
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('seasons');
+        Schema::dropIfExists('seeds');
     }
 }; 

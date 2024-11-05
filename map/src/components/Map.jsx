@@ -1,6 +1,6 @@
 import React from "react";
 import L from 'leaflet';
-import { Map, TileLayer, Marker, Popup, ZoomControl, Polygon, Polyline } from "react-leaflet";
+import { Map, TileLayer, Marker, Popup, ZoomControl, Polygon, Polyline, Tooltip } from "react-leaflet";
 import '../css/Map.css';
 import { connect } from "react-redux";
 import axios from 'axios';
@@ -10,16 +10,15 @@ L.Icon.Default.imagePath = "https://unpkg.com/leaflet@1.5.0/dist/images/";
 
 class MapComponent extends React.Component {
   state = {
-    // Установите координаты для Целинского района Ростовской области
-    lat: 46.536032,  // Широта
-    lng: 41.031736, // Долгота
-    zoom: 10,     // Увеличение для более детального просмотра
-    basemap: 'mapbox', // Убедитесь, что это значение существует в basemapsDict
-    polygons: [], // Массив для хранния заливок
-    inputCoordinates: [], // Массив для хранения введенных координат
-    creationMode: true, // Новый флаг для режима создания полей
-    selectedPolygonId: null, // ID выбранного полигон
-    fieldTypes: ['Пшеница', 'Кукуруза', 'Соя', 'Подсолнечник', 'Рапс', 'Ячмень', 'Овес', 'Рис', 'Гречиха'], // Возможные типы полей
+    lat: 46.536032,
+    lng: 41.031736,
+    zoom: 10,
+    basemap: 'mapbox',
+    polygons: [],
+    inputCoordinates: [],
+    creationMode: true,
+    selectedPolygonId: null,
+    fieldTypes: ['Пшеница', 'Кукуруза', 'Соя', 'Подсолнечник', 'Рапс', 'Ячмень', 'Овес', 'Рис', 'Гречиха'],
     seedNames: {
       'Пшеница': 'Семена Пшеницы',
       'Кукуруза': 'Семена Кукурузы',
@@ -42,13 +41,20 @@ class MapComponent extends React.Component {
       'Рис': 'lightblue',
       'Гречиха': 'brown'
     },
-    selectedFieldTypes: {}, // Объект для хранения выбранных типов полей для каждого полигона
-    seasons: [], // Массив для хранения сезонов
-    currentSeasonId: null, // ID текущего сезона
-    newSeasonName: '' // Имя для нового сезона
+    selectedFieldTypes: {},
+    seasons: [],
+    currentSeasonId: null,
+    newSeasonName: '',
+    filterText: '',
+    seeds: [],
+    fields: [],
+    selectedFieldId: null,
+    selectedSeason: '',
+    selectedFieldType: '',
+    newPolygonName: '',
+    searchPolygonName: '',
   };
 
-  // Переместите basemapsDict сюда
   basemapsDict = {
     osm: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     hot: "https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
@@ -56,16 +62,12 @@ class MapComponent extends React.Component {
     mapbox: "https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}.png"
   };
 
-  colors = ['red']
-  handleInputChange = (e) => {
-    const { value } = e.target;
-    const coordinates = value.split(',').map(coord => coord.trim()).filter(coord => coord); // Разделяем по запятой и очищаем пробелы
-    this.setState({ inputCoordinates: coordinates });
-  };
+  colors = ['red'];
 
   componentDidMount() {
+    this.loadAllPolygons();
     this.loadSeasons();
-    this.loadPolygonsFromDatabase();
+    this.loadSeeds();
   }
 
   loadSeasons = async () => {
@@ -79,6 +81,14 @@ class MapComponent extends React.Component {
 
   createNewSeason = async () => {
     try {
+      console.log('Отправляемые данные:', {
+        name: this.state.newSeasonName,
+        seeds: this.state.polygons.map(polygon => ({
+          id: polygon.id,
+          field_type: this.state.selectedFieldTypes[polygon.id] || 'Пшеница'
+        }))
+      });
+
       const response = await axios.post('http://appi.test/api/seasons', {
         name: this.state.newSeasonName,
         seeds: this.state.polygons.map(polygon => ({
@@ -95,6 +105,7 @@ class MapComponent extends React.Component {
     } catch (error) {
       console.error('Ошибка при создании нового сезона:', error);
       if (error.response && error.response.data) {
+        console.log('Детали ошибки:', error.response.data);
         alert(`Ошибка: ${error.response.data.message}`);
       } else {
         alert(`Ошибка: ${error.message}`);
@@ -112,78 +123,90 @@ class MapComponent extends React.Component {
     if (!this.state.currentSeasonId) return;
 
     try {
-        const response = await axios.get(`http://appi.test/api/seasons/${this.state.currentSeasonId}/fields`);
-        const polygonsData = response.data;
-        console.log('Загруженные данные полигонов:', polygonsData);
-        const polygons = polygonsData.map(polygon => ({
-          id: polygon.id,
-          coordinates: polygon.coordinates,
-          color: polygon.color,
-          field_type: null // Сбрасываем тип поля
+      const response = await axios.get(`http://appi.test/api/seasons/${this.state.currentSeasonId}/fields`);
+      const polygonsData = response.data;
+      console.log('Загруженные данные полигонов:', polygonsData);
+      const polygons = polygonsData.map(polygon => ({
+        id: polygon.id,
+        coordinates: polygon.coordinates,
+        color: polygon.color,
+        field_type: null
       }));
 
       this.setState({ polygons, selectedFieldTypes: {} });
     } catch (error) {
-        console.error('Ошибка при загрузке полигонов:', error);
-        alert('Ошибка при загрузке данных: ' + error.message);
+      console.error('Ошибка при загрузке полигонов:', error);
+      alert('Ошибка при загрузке данных: ' + error.message);
     }
   };
 
+  handlePolygonNameChange = (event) => {
+    this.setState({ newPolygonName: event.target.value });
+  };
+
   addPolygon = async () => {
-    const { inputCoordinates, selectedFieldTypes, currentSeasonId } = this.state;
-    if (!currentSeasonId) {
-        alert('Пожалуйста, выберите сезон.');
-        return;
+    const { inputCoordinates, newPolygonName, polygons } = this.state;
+
+    // Проверка на пустое название
+    if (!newPolygonName.trim()) {
+      alert('Напишите название поля');
+      return;
+    }
+
+    // Проверка на уникальность имени полигона
+    const isNameTaken = polygons.some(polygon => polygon.name === newPolygonName);
+    if (isNameTaken) {
+      alert('Имя поля занято');
+      return;
     }
 
     if (inputCoordinates.length >= 4 && inputCoordinates.length <= 9) {
-        const coordinates = inputCoordinates.map(coord => {
-            const [lat, lng] = coord.split(' ').map(Number);
-            return [lat, lng];
-        });
+      const coordinates = inputCoordinates.map(coord => {
+        const [lat, lng] = coord.split(' ').map(Number);
+        return [lat, lng];
+      });
 
-        const selectedType = selectedFieldTypes[this.state.selectedPolygonId] || 'Пшеница';
+      if (coordinates.length > 0 && coordinates[0] !== coordinates[coordinates.length - 1]) {
+        coordinates.push(coordinates[0]);
+      }
 
-        const newPolygon = {
+      const newPolygon = {
+        coordinates: coordinates,
+        name: newPolygonName,
+        area: this.calculateArea(coordinates)
+      };
+
+      try {
+        const response = await axios.post('http://appi.test/api/fields', newPolygon);
+        console.log('Ответ сервера:', response.data);
+
+        if (response.data && response.data.success && response.data.id && response.data.name) {
+          const addedPolygon = {
+            id: response.data.id,
             coordinates: coordinates,
-            color: this.colors[this.state.polygons.length % this.colors.length],
-            name: 'Polygon Name',
-            field_type: selectedType
-        };
+            color: 'red',
+            name: response.data.name,
+            area: newPolygon.area
+          };
 
-        try {
-            const response = await axios.post(`http://appi.test/api/seasons/${currentSeasonId}/fields`, newPolygon);
-            console.log('Ответ сервера:', response.data);
+          this.setState(prevState => ({
+            polygons: [...prevState.polygons, addedPolygon],
+            inputCoordinates: [],
+            newPolygonName: ''
+          }));
 
-            if (response.data && response.data.success && response.data.id && response.data.name) {
-                console.log('Полученный id:', response.data.id);
-                console.log('Полученное имя:', response.data.name);
-
-                const addedPolygon = {
-                    id: response.data.id,
-                    coordinates: coordinates,
-                    color: newPolygon.color,
-                    name: response.data.name,
-                    field_type: selectedType
-                };
-
-                this.setState(prevState => ({
-                    polygons: [...prevState.polygons, addedPolygon],
-                    inputCoordinates: []
-                }));
-
-                console.log("Полигон добавлен:", addedPolygon);
-            } else {
-                const errorMessage = response.data.error || 'Неизвестная ошибка';
-                console.error('Ошибка при добавлении полигона:', errorMessage);
-                alert(`Не удалось сохранить полигон: ${errorMessage}`);
-            }
-        } catch (error) {
-            console.error('Ошибка при добавлении полигона:', error);
-            alert(`Ошибка: ${error.message}`);
+          console.log("Полигон добавлен:", addedPolygon);
+        } else {
+          const errorMessage = response.data.error || 'Неизвестная ошибка';
+          console.error('Ошибка при добавлении полигона:', errorMessage);
+          alert(`Не удалось сохранить полигон: ${errorMessage}`);
         }
+      } catch (error) {
+        console.error('Ошибка при добавлении полигона:', error);
+        alert(`Ошибка: ${error.message}`);
+      }
     } else {
-        alert("Введите от 4 до 9 координат в формате 'lat lng', разделенные запятыми.");
+      alert("Введите от 4 до 9 координат в формате 'lat lng', разделенные запятыми.");
     }
   };
 
@@ -195,12 +218,12 @@ class MapComponent extends React.Component {
 
   removeLastPolygon = () => {
     this.setState(prevState => ({
-      polygons: prevState.polygons.slice(0, -1) // Удаляем последний полигон
+      polygons: prevState.polygons.slice(0, -1)
     }));
   };
 
   handleMapClick = (e) => {
-    if (!this.state.creationMode) return; // Если режим создания выключен, не добавляем координаты
+    if (!this.state.creationMode) return;
 
     const { lat, lng } = e.latlng;
     const newCoordinates = [...this.state.inputCoordinates, `${lat} ${lng}`];
@@ -216,7 +239,7 @@ class MapComponent extends React.Component {
   removeSelectedPolygon = () => {
     this.setState(prevState => ({
       polygons: prevState.polygons.filter(polygon => polygon.id !== prevState.selectedPolygonId),
-      selectedPolygonId: null // Сбросить выбраный полигон
+      selectedPolygonId: null
     }));
   };
 
@@ -226,9 +249,198 @@ class MapComponent extends React.Component {
 
   componentDidUpdate(prevProps, prevState) {
     if (prevState.polygons !== this.state.polygons) {
-      console.log('Обновлено состояние полигонов:', this.state.polygons);
+      console.log('Оовлено состояние полигонов:', this.state.polygons);
     }
   }
+
+  calculatePolygonCenter(coordinates) {
+    const latSum = coordinates.reduce((sum, coord) => sum + coord[0], 0);
+    const lngSum = coordinates.reduce((sum, coord) => sum + coord[1], 0);
+    return [latSum / coordinates.length, lngSum / coordinates.length];
+  }
+
+  handleFieldTypeChange = (polygonId, event) => {
+    const { value } = event.target;
+    this.setState(prevState => ({
+      selectedFieldTypes: {
+        ...prevState.selectedFieldTypes,
+        [polygonId]: value
+      }
+    }));
+  };
+
+  loadSeeds = async () => {
+    try {
+      const response = await axios.get('http://appi.test/api/seeds');
+      const seeds = response.data;
+      this.setState({ seeds });
+    } catch (error) {
+      console.error('Ошибка при загрузке семян:', error);
+    }
+  };
+
+  handleSeedChange = (event) => {
+    const seedId = event.target.value;
+    console.log('Выбранный семя ID:', seedId);
+    this.setState({ currentSeedId: seedId }, this.loadPolygonsFromDatabase);
+  };
+
+  editField = async (fieldId) => {
+    const field = this.state.fields.find(f => f.id === fieldId);
+    if (!field) return;
+
+    this.setState({
+      editFieldId: field.id,
+      newFieldName: field.name,
+      newFieldCoordinates: field.coordinates,
+      newFieldArea: field.area.toString()
+    });
+  };
+
+  updateField = async () => {
+    const { editFieldId, newFieldName, newFieldCoordinates, newFieldArea } = this.state;
+    if (!editFieldId || !newFieldName || !newFieldCoordinates || !newFieldArea) {
+      alert('Пожалуйста, заполните все поля.');
+      return;
+    }
+
+    try {
+      const response = await axios.put(`http://appi.test/api/fields/${editFieldId}`, {
+        name: newFieldName,
+        coordinates: newFieldCoordinates,
+        area: parseFloat(newFieldArea)
+      });
+
+      this.setState(prevState => ({
+        fields: prevState.fields.map(field =>
+          field.id === editFieldId ? response.data.field : field
+        ),
+        editFieldId: null,
+        newFieldName: '',
+        newFieldCoordinates: '',
+        newFieldArea: ''
+      }));
+
+      alert('Поле успешно обновлено!');
+    } catch (error) {
+      console.error('Ошибка при обновлении поля:', error);
+      alert('Ошибка при обновлении поля: ' + error.message);
+    }
+  };
+
+  deleteField = async (fieldId) => {
+    try {
+      await axios.delete(`http://appi.test/api/fields/${fieldId}`);
+      this.setState(prevState => ({
+        fields: prevState.fields.filter(field => field.id !== fieldId)
+      }));
+      alert('Поле успешно удалено!');
+    } catch (error) {
+      console.error('Ошибка при удалении поля:', error);
+      alert('Ошибка при удалении поля: ' + error.message);
+    }
+  };
+
+  handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    this.setState({ [name]: value }, this.filterFields);
+  };
+
+  filterFields = () => {
+    const { fields, selectedSeasonId, selectedSeedId } = this.state;
+    const filteredFields = fields.filter(field => {
+        const binding = field.bindings.find(b => b.season_id === selectedSeasonId && b.seed_id === selectedSeedId);
+        return binding !== undefined;
+    });
+    this.setState({ filteredFields });
+  };
+
+  getFilteredFields = () => {
+    const { fields, filterText } = this.state;
+    return fields.filter(field => field.name.toLowerCase().includes(filterText.toLowerCase()));
+  };
+
+  calculateArea = (coordinates) => {
+    // Реализуйте ваш алгоритм для расчета площади
+    return 0; // Замените на реальное значение
+  };
+
+  loadAllPolygons = async () => {
+    try {
+      const response = await axios.get('http://appi.test/api/fields');
+      const polygonsData = response.data;
+      console.log('Загруженные данные полигонов:', polygonsData);
+      const polygons = polygonsData.map(polygon => ({
+        id: polygon.id,
+        coordinates: JSON.parse(polygon.coordinates),
+        color: polygon.color || 'red',
+        name: polygon.name,
+        field_type: polygon.field_type
+      }));
+
+      this.setState({ polygons });
+    } catch (error) {
+      console.error('Ошибка при загрузке плигонов:', error);
+      alert('Ошибка при загрузке данных: ' + error.message);
+    }
+  };
+
+  handleFieldSelection = (event) => {
+    this.setState({ selectedFieldId: event.target.value });
+  };
+
+  handleSeasonInputChange = (event) => {
+    this.setState({ selectedSeason: event.target.value });
+  };
+
+  handleFieldTypeSelection = (event) => {
+    this.setState({ selectedFieldType: event.target.value });
+  };
+
+  saveProperty = async () => {
+    const { selectedFieldId, selectedSeason, selectedFieldType } = this.state;
+    if (!selectedFieldId || !selectedSeason || !selectedFieldType) {
+      alert('Пожалуйста, заполните все поля.');
+      return;
+    }
+
+    try {
+      const response = await axios.post('http://appi.test/api/properties', {
+        field_id: selectedFieldId,
+        season: selectedSeason,
+        field_type: selectedFieldType
+      });
+
+      alert('Данные успешно сохранены!');
+    } catch (error) {
+      console.error('Ошибка при сохранении данных:', error);
+      alert('Ошибка при сохранении данных: ' + error.message);
+    }
+  };
+
+  handleSearchNameChange = (event) => {
+    this.setState({ searchPolygonName: event.target.value });
+  };
+
+  searchPolygonsByName = async () => {
+    const { searchPolygonName } = this.state;
+
+    if (!searchPolygonName.trim()) {
+      alert('Введите название для поиска');
+      return;
+    }
+
+    try {
+      const response = await axios.post('http://appi.test/api/fields/by-name', { name: searchPolygonName });
+      const polygonsData = response.data;
+      console.log('Найденные полигоны:', polygonsData);
+
+      this.setState({ polygons: polygonsData });
+    } catch (error) {
+      console.error('Ошибка при поиске полигонов:', error);
+      alert('Ошибка при поиске полигонов: ' + error.message);
+    }
+  };
 
   render() {
     const center = [this.state.lat, this.state.lng];
@@ -239,48 +451,68 @@ class MapComponent extends React.Component {
       return null;
     }
 
-    console.log("Current Polygons:", this.state.polygons); // Выводим текущие полигоны в консоль
+    console.log("Current Polygons:", this.state.polygons);
 
-    // Преобразуем inputCoordinates в массив координат для Polyline
     const polylineCoordinates = this.state.inputCoordinates.map(coord => {
       const [lat, lng] = coord.split(' ').map(Number);
       return [lat, lng];
     });
 
+    const filteredFields = this.getFilteredFields();
+
     return (
       <div style={{ position: 'relative', height: '100vh', width: '100vw' }}>
-        {/* Основной блок управления картой */}
         <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 1000, background: 'white', padding: '10px', borderRadius: '5px' }}>
           <input
             type="text"
             placeholder='Введите координаты в формате "lat lng", разделенные запятыми'
-            value={this.state.inputCoordinates.join(', ')} // Преобразуем массив в строку
+            value={this.state.inputCoordinates.join(', ')}
             onChange={this.handleInputChange}
-            style={{ width: '300px', marginRight: '10px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} // Устанавливаем фиксированную ширину и стили для предотвращения растягивания
+            style={{ width: '300px', marginRight: '10px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+          />
+          <input
+            type="text"
+            placeholder='Введите название полигона'
+            value={this.state.newPolygonName}
+            onChange={this.handlePolygonNameChange}
+            style={{ width: '200px', marginRight: '10px' }}
           />
           <button onClick={this.addPolygon}>Сохранить заливку</button>
           <button onClick={this.clearMarkers}>Очистить маркеры</button>
           <button onClick={this.toggleCreationMode}>
             {this.state.creationMode ? 'Выключить режим заливки' : 'Включить режим заливки'}
           </button>
+          <input
+            type="text"
+            placeholder='Введите название для поиска'
+            value={this.state.searchPolygonName}
+            onChange={this.handleSearchNameChange}
+            style={{ width: '200px', marginRight: '10px' }}
+          />
+          <button onClick={this.searchPolygonsByName}>Поиск по названию</button>
         </div>
 
-        {/* Блок для управления сезонами */}
-        <div style={{ position: 'absolute', top: 100, left: 10, zIndex: 1000, background: 'white', padding: '10px', borderRadius: '5px' }}>
-          <h3>Управление сезонами</h3>
-          <select onChange={this.handleSeasonChange} value={this.state.currentSeasonId || ''}>
-            <option value="" disabled>Выберите сезон</option>
-            {this.state.seasons.map(season => (
-              <option key={season.id} value={season.id}>{season.name}</option>
+        <div style={{ position: 'absolute', top: 200, left: 10, zIndex: 1000, background: 'white', padding: '10px', borderRadius: '5px' }}>
+          <h3>Управление полями</h3>
+          <select onChange={this.handleFieldSelection} value={this.state.selectedFieldId || ''}>
+            <option value="" disabled>Выберите поле</option>
+            {this.state.fields.map(field => (
+              <option key={field.id} value={field.id}>{field.name}</option>
             ))}
           </select>
           <input
             type="text"
-            placeholder="Имя нового сезона"
-            value={this.state.newSeasonName}
-            onChange={(e) => this.setState({ newSeasonName: e.target.value })}
+            placeholder="Введите сезон"
+            value={this.state.selectedSeason}
+            onChange={this.handleSeasonInputChange}
           />
-          <button onClick={this.createNewSeason}>Создать новй сезон</button>
+          <select onChange={this.handleFieldTypeSelection} value={this.state.selectedFieldType || ''}>
+            <option value="" disabled>Выберите тип поля</option>
+            {this.state.fieldTypes.map(type => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+          <button onClick={this.saveProperty}>Сохранить</button>
         </div>
 
         <Map
@@ -304,6 +536,9 @@ class MapComponent extends React.Component {
               <Marker key={index} position={[lat, lng]} />
             );
           })}
+          {polylineCoordinates.length > 1 && (
+            <Polyline positions={polylineCoordinates} color="blue" />
+          )}
           {this.state.polygons.map(polygon => {
             const selectedType = this.state.selectedFieldTypes[polygon.id];
             const fillColor = this.state.fieldColors[selectedType] || polygon.color;
@@ -313,18 +548,23 @@ class MapComponent extends React.Component {
               <Polygon
                 key={polygon.id}
                 positions={polygon.coordinates}
-                color="red" // Устанавливаем границы полигона красными
-                fillColor={fillColor} // Устанавливаем цвет заливки  зависимости от выбранного типа семян
+                color="red"
+                fillColor={fillColor}
                 fillOpacity={0.5}
+                name={polygon.name}
               >
+                <Tooltip permanent className="polygon-tooltip">
+                  <span>{polygon.name}</span>
+                </Tooltip>
                 <Popup>
                   <div>
+                    <p>Имя полигона: {polygon.name}</p>
                     <label>Выберите тип поля:</label>
                     <select
                       value={selectedType || ''}
                       onChange={(e) => this.handleFieldTypeChange(polygon.id, e)}
                     >
-                      <option value="" disabled>Выберите тип</option>
+                      <option value="" disabled>Выберте тип</option>
                       {this.state.fieldTypes.map(type => (
                         <option key={type} value={type}>{type}</option>
                       ))}
@@ -335,29 +575,29 @@ class MapComponent extends React.Component {
               </Polygon>
             );
           })}
-          <Polyline positions={polylineCoordinates} />
+          {filteredFields.map(field => (
+            <Polygon
+              key={field.id}
+              positions={JSON.parse(field.coordinates)}
+              color="red"
+              fillColor="blue"
+              fillOpacity={0.5}
+            >
+              <Popup>
+                <div>
+                  <p>Название: {field.name}</p>
+                  <p>Площадь: {field.area} кв.м</p>
+                  <button onClick={() => this.editField(field.id)}>Редактировать</button>
+                  <button onClick={() => this.deleteField(field.id)}>Удалить</button>
+                </div>
+              </Popup>
+            </Polygon>
+          ))}
         </Map>
       </div>
     );
   }
-
-  // Функция для вычисления центра полигона
-  calculatePolygonCenter(coordinates) {
-    const latSum = coordinates.reduce((sum, coord) => sum + coord[0], 0);
-    const lngSum = coordinates.reduce((sum, coord) => sum + coord[1], 0);
-    return [latSum / coordinates.length, lngSum / coordinates.length];
-  }
-
-  handleFieldTypeChange = (polygonId, event) => {
-    const { value } = event.target;
-    this.setState(prevState => ({
-      selectedFieldTypes: {
-        ...prevState.selectedFieldTypes,
-        [polygonId]: value
-      }
-    }));
-  };
-};
+}
 
 const mapStateToProps = (state) => {
   return {
