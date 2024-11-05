@@ -44,4 +44,5 @@
   white-space: nowrap; /* Запрет на перенос текста */
   overflow: hidden; /* Скрытие переполнения */
   text-overflow: ellipsis; /* Добавление многоточия для длинного текста */
+  pointer-events: none; /* Отключение событий мыши */
 }

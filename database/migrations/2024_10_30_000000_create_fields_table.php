@@ -10,9 +10,9 @@ return new class extends Migration
     {
         Schema::create('fields', function (Blueprint $table) {
             $table->id();
-            $table->string('name'); // Название поля
-            $table->text('coordinates'); // Координаты поля
-            $table->float('area'); // Площадь поля
+            $table->string('name');
+            $table->json('coordinates');
+            $table->double('area', 15, 2); // Измените тип данных на double
             $table->timestamps();
         });
     }

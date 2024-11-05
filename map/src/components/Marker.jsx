@@ -1,36 +1,38 @@
 import React from 'react';
+import { Marker as LeafletMarker } from 'react-leaflet';
 
 class Marker extends React.Component {
     constructor(props) {
         super(props);
-        // Инициализация состояния
         this.state = {
-            // ... начальное состояние ...
+            position: props.position
         };
     }
 
-    componentDidMount() {
-        // Перенесите сюда код с побочными эффектами из componentWillMount
-    }
-
-    componentDidUpdate(prevProps) {
-        // Перенесите сюда код из componentWillReceiveProps
-        // Например, если вы обновляете состояние на основе изменения props
-        if (this.props.someProp !== prevProps.someProp) {
-            // ... обновление состояния ...
+    handleDragEnd = (event) => {
+        const newPosition = event.target.getLatLng();
+        this.setState({ position: newPosition });
+        if (this.props.onDragEnd) {
+            this.props.onDragEnd(newPosition, this.props.index);
         }
-    }
+    };
 
-    // Удалите или переименуйте устаревшие методы
-    // UNSAFE_componentWillMount() {
-    //     // ... код, который был в componentWillMount ...
-    // }
-
-    // UNSAFE_componentWillReceiveProps(nextProps) {
-    //     // ... код, который был в componentWillReceiveProps ...
-    // }
+    handleDoubleClick = () => {
+        if (this.props.onDoubleClick) {
+            this.props.onDoubleClick(this.props.index);
+        }
+    };
 
     render() {
-        // ... рендеринг компонента ...
+        return (
+            <LeafletMarker
+                position={this.state.position}
+                draggable={true}
+                onDragend={this.handleDragEnd}
+                onDblclick={this.handleDoubleClick}
+            />
+        );
     }
 }
+
+export default Marker;

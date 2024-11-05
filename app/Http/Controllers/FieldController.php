@@ -21,25 +21,15 @@ class FieldController extends Controller
             $polygonsData = $query->get();
 
             $formattedPolygons = $polygonsData->map(function($polygon) {
-                $coordinates = array_map(function($coord) {
-                    $coords = explode(' ', $coord);
-                    if (count($coords) == 2) {
-                        return array_map('floatval', $coords);
-                    } else {
-                        Log::error('Некорректные координаты: ' . $coord);
-                        return null;
-                    }
-                }, explode(',', $polygon->coordinates));
+                $coordinates = json_decode($polygon->coordinates, true);
 
                 return [
                     'id' => $polygon->id,
-                    'coordinates' => array_filter($coordinates),
+                    'coordinates' => $coordinates,
                     'color' => $polygon->color,
                     'name' => $polygon->name,
                     'field_type' => $polygon->field_type
                 ];
-            })->filter(function($polygon) {
-                return !empty($polygon['coordinates']);
             });
 
             return response()->json($formattedPolygons);
@@ -58,8 +48,16 @@ class FieldController extends Controller
                 'area' => 'required|numeric'
             ]);
 
+            $coordinates = array_filter($validatedData['coordinates'], function($coord) {
+                return $coord[0] !== 0 && $coord[1] !== 0;
+            });
+
+            if (empty($coordinates)) {
+                return response()->json(['success' => false, 'error' => 'Некорректные координаты'], 400);
+            }
+
             $field = new Field();
-            $field->coordinates = json_encode($validatedData['coordinates']);
+            $field->coordinates = json_encode($coordinates);
             $field->name = $validatedData['name'];
             $field->area = $validatedData['area'];
             $field->save();
@@ -177,7 +175,7 @@ class FieldController extends Controller
                     'coordinates' => array_filter($coordinates),
                     'color' => $polygon->color,
                     'name' => $polygon->name,
-                    'field_type' => $polygon->field_type
+                    'area' => $polygon->area
                 ];
             })->filter(function($polygon) {
                 return !empty($polygon['coordinates']);

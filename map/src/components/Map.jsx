@@ -4,6 +4,7 @@ import { Map, TileLayer, Marker, Popup, ZoomControl, Polygon, Polyline, Tooltip 
 import '../css/Map.css';
 import { connect } from "react-redux";
 import axios from 'axios';
+import * as turf from '@turf/turf'; // Импортируем turf
 
 // указываем путь к файлам marker
 L.Icon.Default.imagePath = "https://unpkg.com/leaflet@1.5.0/dist/images/";
@@ -144,6 +145,12 @@ class MapComponent extends React.Component {
     this.setState({ newPolygonName: event.target.value });
   };
 
+  calculateArea = (coordinates) => {
+    const polygon = turf.polygon([coordinates]);
+    const area = turf.area(polygon);
+    return area;
+  };
+
   addPolygon = async () => {
     const { inputCoordinates, newPolygonName, polygons } = this.state;
 
@@ -163,17 +170,20 @@ class MapComponent extends React.Component {
     if (inputCoordinates.length >= 4 && inputCoordinates.length <= 9) {
       const coordinates = inputCoordinates.map(coord => {
         const [lat, lng] = coord.split(' ').map(Number);
-        return [lat, lng];
+        return [lat, lng]; // Убедитесь, что порядок [lat, lng] правильный
       });
 
-      if (coordinates.length > 0 && coordinates[0] !== coordinates[coordinates.length - 1]) {
+      // Добавление первой координаты в конец, если они не совпадают
+      if (coordinates.length > 0 && (coordinates[0][0] !== coordinates[coordinates.length - 1][0] || coordinates[0][1] !== coordinates[coordinates.length - 1][1])) {
         coordinates.push(coordinates[0]);
       }
+
+      const area = this.calculateArea(coordinates);
 
       const newPolygon = {
         coordinates: coordinates,
         name: newPolygonName,
-        area: this.calculateArea(coordinates)
+        area: area
       };
 
       try {
@@ -337,7 +347,7 @@ class MapComponent extends React.Component {
       alert('Поле успешно удалено!');
     } catch (error) {
       console.error('Ошибка при удалении поля:', error);
-      alert('Ошибка при удалении поля: ' + error.message);
+      alert('Ошибка при далении поля: ' + error.message);
     }
   };
 
@@ -360,27 +370,28 @@ class MapComponent extends React.Component {
     return fields.filter(field => field.name.toLowerCase().includes(filterText.toLowerCase()));
   };
 
-  calculateArea = (coordinates) => {
-    // Реализуйте ваш алгоритм для расчета площади
-    return 0; // Замените на реальное значение
-  };
-
   loadAllPolygons = async () => {
     try {
       const response = await axios.get('http://appi.test/api/fields');
       const polygonsData = response.data;
       console.log('Загруженные данные полигонов:', polygonsData);
-      const polygons = polygonsData.map(polygon => ({
-        id: polygon.id,
-        coordinates: JSON.parse(polygon.coordinates),
-        color: polygon.color || 'red',
-        name: polygon.name,
-        field_type: polygon.field_type
-      }));
+
+      const polygons = polygonsData.map(polygon => {
+        // Преобразуем объект coordinates в массив массивов
+        const coordinatesArray = Object.values(polygon.coordinates).map(coord => [coord[1], coord[0]]);
+
+        return {
+          id: polygon.id,
+          coordinates: coordinatesArray, // Используем преобразованный массив
+          color: polygon.color || 'red',
+          name: polygon.name,
+          field_type: polygon.field_type
+        };
+      });
 
       this.setState({ polygons });
     } catch (error) {
-      console.error('Ошибка при загрузке плигонов:', error);
+      console.error('Ошибка при загрузке полигонов:', error);
       alert('Ошибка при загрузке данных: ' + error.message);
     }
   };
@@ -442,6 +453,26 @@ class MapComponent extends React.Component {
     }
   };
 
+  componentWillUnmount() {
+    // Отмените все асинхронные операции, например, запросы axios
+    this.cancelTokenSource && this.cancelTokenSource.cancel('Component unmounted');
+  }
+
+  handleMarkerDragEnd = (newPosition, index) => {
+    this.setState(prevState => {
+      const newCoordinates = [...prevState.inputCoordinates];
+      newCoordinates[index] = `${newPosition.lat} ${newPosition.lng}`;
+      return { inputCoordinates: newCoordinates };
+    });
+  };
+
+  handleMarkerDoubleClick = (index) => {
+    this.setState(prevState => {
+      const newCoordinates = prevState.inputCoordinates.filter((_, i) => i !== index);
+      return { inputCoordinates: newCoordinates };
+    });
+  };
+
   render() {
     const center = [this.state.lat, this.state.lng];
     const basemapUrl = this.basemapsDict[this.state.basemap];
@@ -457,6 +488,11 @@ class MapComponent extends React.Component {
       const [lat, lng] = coord.split(' ').map(Number);
       return [lat, lng];
     });
+
+    // Добавление первой координаты в конец, если они не совпадают
+    if (polylineCoordinates.length > 1 && (polylineCoordinates[0][0] !== polylineCoordinates[polylineCoordinates.length - 1][0] || polylineCoordinates[0][1] !== polylineCoordinates[polylineCoordinates.length - 1][1])) {
+      polylineCoordinates.push(polylineCoordinates[0]);
+    }
 
     const filteredFields = this.getFilteredFields();
 
@@ -533,7 +569,13 @@ class MapComponent extends React.Component {
           {this.state.inputCoordinates.map((coord, index) => {
             const [lat, lng] = coord.split(' ').map(Number);
             return (
-              <Marker key={index} position={[lat, lng]} />
+              <Marker
+                key={index}
+                position={[lat, lng]}
+                onDragEnd={this.handleMarkerDragEnd}
+                onDoubleClick={this.handleMarkerDoubleClick}
+                index={index}
+              />
             );
           })}
           {polylineCoordinates.length > 1 && (
@@ -542,7 +584,6 @@ class MapComponent extends React.Component {
           {this.state.polygons.map(polygon => {
             const selectedType = this.state.selectedFieldTypes[polygon.id];
             const fillColor = this.state.fieldColors[selectedType] || polygon.color;
-            const seedName = this.state.seedNames[selectedType] || 'Не выбрано';
 
             return (
               <Polygon
@@ -553,7 +594,7 @@ class MapComponent extends React.Component {
                 fillOpacity={0.5}
                 name={polygon.name}
               >
-                <Tooltip permanent className="polygon-tooltip">
+                <Tooltip permanent direction="center" className="polygon-tooltip">
                   <span>{polygon.name}</span>
                 </Tooltip>
                 <Popup>
@@ -569,7 +610,7 @@ class MapComponent extends React.Component {
                         <option key={type} value={type}>{type}</option>
                       ))}
                     </select>
-                    <p>Название семян: {seedName}</p>
+                    <p>Название семян: {this.state.seedNames[selectedType] || 'Не выбрано'}</p>
                   </div>
                 </Popup>
               </Polygon>
