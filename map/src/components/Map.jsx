@@ -54,7 +54,7 @@ class MapComponent extends React.Component {
     selectedFieldType: '',
     newPolygonName: '',
     searchPolygonName: '',
-    showPolygons: false,
+    showPolygons: true,
   };
 
   basemapsDict = {
@@ -365,12 +365,11 @@ class MapComponent extends React.Component {
       console.log('Загруженные данные полигонов:', polygonsData);
 
       const polygons = polygonsData.map(polygon => {
-        // Преобразуем объект coordinates в массив массивов
-        const coordinatesArray = Object.values(polygon.coordinates).map(coord => [coord[1], coord[0]]);
-
+        // Убедитесь, что координаты в формате [[lat, lng], [lat, lng], ...]
+        const coordinatesArray = polygon.coordinates.map(coord => [coord[0], coord[1]]);
         return {
           id: polygon.id,
-          coordinates: coordinatesArray, // Используем преобразованный массив
+          coordinates: coordinatesArray,
           color: polygon.color || 'red',
           name: polygon.name,
           field_type: polygon.field_type
@@ -519,7 +518,11 @@ class MapComponent extends React.Component {
             style={{ width: '200px', marginRight: '10px' }}
           />
           <button onClick={this.searchPolygonsByName}>Поиск по названию</button>
-          <button onClick={() => this.setState(prevState => ({ showPolygons: !prevState.showPolygons }))}>
+          <button onClick={() => {
+            this.setState(prevState => ({
+              showPolygons: !prevState.showPolygons
+            }));
+          }}>
             {this.state.showPolygons ? 'Скрыть полигоны' : 'Показать полигоны'}
           </button>
         </div>
