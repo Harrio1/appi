@@ -3,9 +3,9 @@
 @import url("~antd/dist/antd.css");
 
 .map {
-  height: 100%;
-  width: 100%;
-  min-width: 399px;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
 }
 
 .geojson-toggle, .wind-toggle {
@@ -13,7 +13,6 @@
   right: 20px;
   z-index: 1000;
   margin-top: 20px;
-  background: white;
   font-size: 14px;
   padding: 4px;
   border-radius: 3px;

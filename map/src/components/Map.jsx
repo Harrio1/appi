@@ -54,6 +54,7 @@ class MapComponent extends React.Component {
     selectedFieldType: '',
     newPolygonName: '',
     searchPolygonName: '',
+    showPolygons: false,
   };
 
   basemapsDict = {
@@ -170,7 +171,7 @@ class MapComponent extends React.Component {
     if (inputCoordinates.length >= 4 && inputCoordinates.length <= 9) {
       const coordinates = inputCoordinates.map(coord => {
         const [lat, lng] = coord.split(' ').map(Number);
-        return [lat, lng]; // Убедитесь, что порядок [lat, lng] правильный
+        return [lat, lng]; // Убедитес, что порядок [lat, lng] правильный
       });
 
       // Добавление первой координаты в конец, если они не совпадают
@@ -338,19 +339,6 @@ class MapComponent extends React.Component {
     }
   };
 
-  deleteField = async (fieldId) => {
-    try {
-      await axios.delete(`http://appi.test/api/fields/${fieldId}`);
-      this.setState(prevState => ({
-        fields: prevState.fields.filter(field => field.id !== fieldId)
-      }));
-      alert('Поле успешно удалено!');
-    } catch (error) {
-      console.error('Ошибка при удалении поля:', error);
-      alert('Ошибка при далении поля: ' + error.message);
-    }
-  };
-
   handleFilterChange = (e) => {
     const { name, value } = e.target;
     this.setState({ [name]: value }, this.filterFields);
@@ -473,6 +461,11 @@ class MapComponent extends React.Component {
     });
   };
 
+  handleInputChange = (event) => {
+    const inputCoordinates = event.target.value.split(',').map(coord => coord.trim());
+    this.setState({ inputCoordinates });
+  };
+
   render() {
     const center = [this.state.lat, this.state.lng];
     const basemapUrl = this.basemapsDict[this.state.basemap];
@@ -498,7 +491,7 @@ class MapComponent extends React.Component {
 
     return (
       <div style={{ position: 'relative', height: '100vh', width: '100vw' }}>
-        <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 1000, background: 'white', padding: '10px', borderRadius: '5px' }}>
+        <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 1000, padding: '10px', borderRadius: '5px' }}>
           <input
             type="text"
             placeholder='Введите координаты в формате "lat lng", разделенные запятыми'
@@ -526,9 +519,12 @@ class MapComponent extends React.Component {
             style={{ width: '200px', marginRight: '10px' }}
           />
           <button onClick={this.searchPolygonsByName}>Поиск по названию</button>
+          <button onClick={() => this.setState(prevState => ({ showPolygons: !prevState.showPolygons }))}>
+            {this.state.showPolygons ? 'Скрыть полигоны' : 'Показать полигоны'}
+          </button>
         </div>
 
-        <div style={{ position: 'absolute', top: 200, left: 10, zIndex: 1000, background: 'white', padding: '10px', borderRadius: '5px' }}>
+        <div style={{ position: 'absolute', top: 200, left: 10, zIndex: 1000, padding: '10px', borderRadius: '5px' }}>
           <h3>Управление полями</h3>
           <select onChange={this.handleFieldSelection} value={this.state.selectedFieldId || ''}>
             <option value="" disabled>Выберите поле</option>
@@ -568,20 +564,23 @@ class MapComponent extends React.Component {
           />
           {this.state.inputCoordinates.map((coord, index) => {
             const [lat, lng] = coord.split(' ').map(Number);
-            return (
-              <Marker
-                key={index}
-                position={[lat, lng]}
-                onDragEnd={this.handleMarkerDragEnd}
-                onDoubleClick={this.handleMarkerDoubleClick}
-                index={index}
-              />
-            );
+            if (!isNaN(lat) && !isNaN(lng)) { // Проверка на валидность координат
+              return (
+                <Marker
+                  key={index}
+                  position={[lat, lng]}
+                  onDragEnd={this.handleMarkerDragEnd}
+                  onDoubleClick={this.handleMarkerDoubleClick}
+                  index={index}
+                />
+              );
+            }
+            return null; // Возвращаем null, если координаты не валидны
           })}
           {polylineCoordinates.length > 1 && (
             <Polyline positions={polylineCoordinates} color="blue" />
           )}
-          {this.state.polygons.map(polygon => {
+          {this.state.showPolygons && this.state.polygons.map(polygon => {
             const selectedType = this.state.selectedFieldTypes[polygon.id];
             const fillColor = this.state.fieldColors[selectedType] || polygon.color;
 
