@@ -17,9 +17,21 @@ class SeasonController extends Controller
     {
         $validatedData = $request->validate([
             'name' => 'required|string',
-            'seeds' => 'required|array', // Убедитесь, что это поле указано как обязательное
         ]);
 
-        // Логика для создания нового сезона
+        $season = Season::create(['name' => $validatedData['name']]);
+
+        return response()->json($season, 201);
+    }
+
+    public function someMethod(Request $request)
+    {
+        $validatedData = $request->validate([
+            'season_id' => 'required|exists:seasons,id',
+        ]);
+
+        $season = Season::find($validatedData['season_id']);
+
+        // Дальнейшая обработка
     }
 }

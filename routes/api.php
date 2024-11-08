@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\FieldController;
 use App\Http\Controllers\SeasonController;
 use App\Http\Controllers\SeedController;
+use App\Http\Controllers\PropertyController;
 
 /*
 |--------------------------------------------------------------------------
@@ -36,7 +37,8 @@ Route::get('/seeds', [SeedController::class, 'index']);
 Route::get('/fields', [FieldController::class, 'index']);
 Route::post('/fields', [FieldController::class, 'storeField']);
 
-Route::post('/properties', [FieldController::class, 'storeProperty']);
+Route::post('/properties', [PropertyController::class, 'store']);
+Route::get('/properties', [PropertyController::class, 'index']);
 
 Route::post('/fields/by-name', [FieldController::class, 'getPolygonsByName']);
 

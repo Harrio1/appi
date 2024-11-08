@@ -132,14 +132,14 @@ class FieldController extends Controller
     {
         $validatedData = $request->validate([
             'field_id' => 'required|exists:fields,id',
-            'season' => 'required|string',
+            'season_id' => 'required|exists:seasons,id',
             'field_type' => 'required|string'
         ]);
 
         try {
             Property::create([
                 'field_id' => $validatedData['field_id'],
-                'season_id' => $validatedData['season'], // Assuming season is stored as a string
+                'season_id' => $validatedData['season_id'],
                 'field_type' => $validatedData['field_type']
             ]);
 
