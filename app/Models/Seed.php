@@ -15,4 +15,14 @@ class Seed extends Model
     {
         return $this->hasMany(SeedColor::class);
     }
+
+    public function colors()
+    {
+        return $this->hasMany(SeedColor::class);
+    }
+
+    public function getColor()
+    {
+        return $this->colors()->first()->color ?? 'default_color';
+    }
 } 

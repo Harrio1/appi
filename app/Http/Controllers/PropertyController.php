@@ -10,26 +10,31 @@ use Illuminate\Support\Facades\Log;
 
 class PropertyController extends Controller
 {
-    public function store(Request $request)
+    public function storeProperty(Request $request)
     {
         $validatedData = $request->validate([
-            'field_id' => 'required|exists:fields,id', 
+            'field_id' => 'required|exists:fields,id',
             'season_name' => 'required|string|exists:seasons,name',
-            'field_type' => 'required|string'
+            'field_type' => 'required|string',
+            'seed_color' => 'required|string'
         ]);
 
         try {
+            Log::info('Полученные данные:', $validatedData);
+
             $season = Season::where('name', $validatedData['season_name'])->first();
 
             if (!$season) {
                 return response()->json(['success' => false, 'error' => 'Сезон не найден'], 404);
             }
 
-            $seedColor = SeedColor::whereHas('seed', function ($query) use ($validatedData) {
-                $query->where('name', $validatedData['field_type']);
-            })->first();
+            $seedColor = SeedColor::where('color', $validatedData['seed_color'])
+                ->whereHas('seed', function ($query) use ($validatedData) {
+                    $query->where('name', $validatedData['field_type']);
+                })->first();
 
             if (!$seedColor) {
+                Log::error('Цвет для выбранной культуры не найден: ' . $validatedData['field_type']);
                 return response()->json(['success' => false, 'error' => 'Цвет для выбранной культуры не найден'], 404)
                                  ->header('Content-Type', 'application/json; charset=UTF-8');
             }

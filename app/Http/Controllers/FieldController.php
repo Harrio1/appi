@@ -7,6 +7,7 @@ use App\Models\Field;
 use App\Models\Property;
 use App\Models\SeedColor;
 use App\Models\Season;
+use App\Models\Seed;
 use Illuminate\Support\Facades\Log;
 
 class FieldController extends Controller
@@ -160,15 +161,19 @@ class FieldController extends Controller
                 return response()->json(['success' => false, 'error' => 'Сезон не найден'], 404);
             }
 
-            $seedColor = SeedColor::where('color', $validatedData['seed_color'])
-                ->whereHas('seed', function ($query) use ($validatedData) {
-                    $query->where('name', $validatedData['field_type']);
-                })->first();
+            $seed = Seed::where('name', $validatedData['field_type'])->first();
+            if (!$seed) {
+                Log::error('Семя для выбранного типа поля не найдено: ' . $validatedData['field_type']);
+                return response()->json(['success' => false, 'error' => 'Семя для выбранного типа поля не найдено'], 404);
+            }
+
+            $seedColor = SeedColor::where('seed_id', $seed->id)
+                                  ->where('color', $validatedData['seed_color'])
+                                  ->first();
 
             if (!$seedColor) {
                 Log::error('Цвет для выбранной культуры не найден: ' . $validatedData['field_type']);
-                return response()->json(['success' => false, 'error' => 'Цвет для выбранной культуры не найден'], 404)
-                                 ->header('Content-Type', 'application/json; charset=UTF-8');
+                return response()->json(['success' => false, 'error' => 'Цвет для выбранной культуры не найден'], 404);
             }
 
             Property::create([
