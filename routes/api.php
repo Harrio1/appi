@@ -37,8 +37,7 @@ Route::get('/seeds', [SeedController::class, 'index']);
 Route::get('/fields', [FieldController::class, 'index']);
 Route::post('/fields', [FieldController::class, 'storeField']);
 
-Route::post('/properties', [PropertyController::class, 'store']);
-Route::get('/properties', [PropertyController::class, 'index']);
+Route::post('/fields/properties', [FieldController::class, 'storeProperty']);
 
 Route::post('/fields/by-name', [FieldController::class, 'getPolygonsByName']);
 

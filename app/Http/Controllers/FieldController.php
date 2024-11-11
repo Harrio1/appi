@@ -5,17 +5,24 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Field;
 use App\Models\Property;
+use App\Models\SeedColor;
+use App\Models\Season;
 use Illuminate\Support\Facades\Log;
 
 class FieldController extends Controller
 {
-    public function index($seasonId = null)
+    public function index($seasonName = null)
     {
         try {
             $query = Field::query();
 
-            if ($seasonId) {
-                $query->where('season_id', $seasonId);
+            if ($seasonName) {
+                $season = Season::where('name', $seasonName)->first();
+                if ($season) {
+                    $query->where('season_id', $season->id);
+                } else {
+                    return response()->json(['error' => 'Сезон не найден'], 404);
+                }
             }
 
             $polygonsData = $query->get();
@@ -93,14 +100,21 @@ class FieldController extends Controller
             'name' => 'required|string|max:255',
             'coordinates' => 'required|string',
             'area' => 'required|numeric|min:0',
-            'season_id' => 'required|exists:seasons,id'
+            'season_name' => 'required|string|exists:seasons,name'
         ]);
 
-        $field = Field::create($validatedData);
+        $season = Season::where('name', $validatedData['season_name'])->firstOrFail();
+
+        $field = Field::create([
+            'name' => $validatedData['name'],
+            'coordinates' => $validatedData['coordinates'],
+            'area' => $validatedData['area'],
+            'season_id' => $season->id
+        ]);
 
         Property::create([
             'field_id' => $field->id,
-            'season_id' => $validatedData['season_id']
+            'season_id' => $season->id
         ]);
 
         return response()->json(['success' => true, 'field' => $field]);
@@ -132,18 +146,38 @@ class FieldController extends Controller
     {
         $validatedData = $request->validate([
             'field_id' => 'required|exists:fields,id',
-            'season_id' => 'required|exists:seasons,id',
-            'field_type' => 'required|string'
+            'season_name' => 'required|string|exists:seasons,name',
+            'field_type' => 'required|string',
+            'seed_color' => 'required|string'
         ]);
 
         try {
+            Log::info('Полученные данные:', $validatedData);
+
+            $season = Season::where('name', $validatedData['season_name'])->first();
+
+            if (!$season) {
+                return response()->json(['success' => false, 'error' => 'Сезон не найден'], 404);
+            }
+
+            $seedColor = SeedColor::where('color', $validatedData['seed_color'])
+                ->whereHas('seed', function ($query) use ($validatedData) {
+                    $query->where('name', $validatedData['field_type']);
+                })->first();
+
+            if (!$seedColor) {
+                Log::error('Цвет для выбранной культуры не найден: ' . $validatedData['field_type']);
+                return response()->json(['success' => false, 'error' => 'Цвет для выбранной культуры не найден'], 404)
+                                 ->header('Content-Type', 'application/json; charset=UTF-8');
+            }
+
             Property::create([
                 'field_id' => $validatedData['field_id'],
-                'season_id' => $validatedData['season_id'],
+                'season_id' => $season->id,
                 'field_type' => $validatedData['field_type']
             ]);
 
-            return response()->json(['success' => true]);
+            return response()->json(['success' => true, 'color' => $seedColor->color]);
         } catch (\Exception $e) {
             Log::error('Ошибка при сохранении данных: ' . $e->getMessage());
             return response()->json(['success' => false, 'error' => $e->getMessage()], 500);

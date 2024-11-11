@@ -14,6 +14,7 @@ return new class extends Migration
             $table->string('color'); // Цвет семени
             $table->timestamps();
 
+            $table->unique(['seed_id', 'color']);
             $table->foreign('seed_id')->references('id')->on('seeds')->onDelete('cascade');
         });
     }

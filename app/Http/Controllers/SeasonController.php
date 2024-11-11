@@ -27,10 +27,10 @@ class SeasonController extends Controller
     public function someMethod(Request $request)
     {
         $validatedData = $request->validate([
-            'season_id' => 'required|exists:seasons,id',
+            'season_name' => 'required|string|exists:seasons,name',
         ]);
 
-        $season = Season::find($validatedData['season_id']);
+        $season = Season::where('name', $validatedData['season_name'])->firstOrFail();
 
         // Дальнейшая обработка
     }
