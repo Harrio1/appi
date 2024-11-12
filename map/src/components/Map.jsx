@@ -6,6 +6,7 @@ import { connect } from "react-redux";
 import axios from 'axios';
 import * as turf from '@turf/turf'; // Импортируем turf
 import SeasonForm from './SeasonForm'; // Импортируем новый компонент
+import Sidebar from './Sidebar'; // Импортируем новый компонент
 
 // указываем путь к файлам marker
 L.Icon.Default.imagePath = "https://unpkg.com/leaflet@1.5.0/dist/images/";
@@ -56,6 +57,9 @@ class MapComponent extends React.Component {
     newPolygonName: '',
     searchPolygonName: '',
     showPolygons: true,
+    showPolygonForm: true,
+    showFieldManagementForm: true,
+    isSidebarVisible: true,
   };
 
   basemapsDict = {
@@ -217,12 +221,12 @@ class MapComponent extends React.Component {
 
           console.log("Полигон добавлен:", addedPolygon);
         } else {
-          const errorMessage = response.data.error || 'Неизвестная ошибка';
-          console.error('Ошибка при добавлении полигона:', errorMessage);
+          const errorMessage = response.data.error || 'Неизвестная ошиб';
+          console.error('Ошибка при давлении полигона:', errorMessage);
           alert(`Не удалось сохранить полигон: ${errorMessage}`);
         }
       } catch (error) {
-        console.error('Ошибка при добавлении полигона:', error);
+        console.error('Ошибка пр добавлении полигона:', error);
         alert(`Ошибка: ${error.message}`);
       }
     } else {
@@ -535,6 +539,24 @@ class MapComponent extends React.Component {
     }
   };
 
+  togglePolygonForm = () => {
+    this.setState(prevState => ({
+      showPolygonForm: !prevState.showPolygonForm
+    }));
+  };
+
+  toggleFieldManagementForm = () => {
+    this.setState(prevState => ({
+      showFieldManagementForm: !prevState.showFieldManagementForm
+    }));
+  };
+
+  toggleSidebar = () => {
+    this.setState(prevState => ({
+      isSidebarVisible: !prevState.isSidebarVisible
+    }));
+  };
+
   render() {
     const center = [this.state.lat, this.state.lng];
     const basemapUrl = this.basemapsDict[this.state.basemap];
@@ -544,14 +566,11 @@ class MapComponent extends React.Component {
       return null;
     }
 
-    console.log("Current Polygons:", this.state.polygons);
-
     const polylineCoordinates = this.state.inputCoordinates.map(coord => {
       const [lat, lng] = coord.split(' ').map(Number);
       return [lat, lng];
     });
 
-    // Добавление первой координаты в конец, если они не совпадают
     if (polylineCoordinates.length > 1 && (polylineCoordinates[0][0] !== polylineCoordinates[polylineCoordinates.length - 1][0] || polylineCoordinates[0][1] !== polylineCoordinates[polylineCoordinates.length - 1][1])) {
       polylineCoordinates.push(polylineCoordinates[0]);
     }
@@ -559,69 +578,31 @@ class MapComponent extends React.Component {
     const filteredFields = this.getFilteredFields();
 
     return (
-      <div style={{ position: 'relative', height: '100vh', width: '100vw' }}>
-        <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 1000, padding: '10px', borderRadius: '5px' }}>
-          <input
-            type="text"
-            placeholder='Введите координаты в формате "lat lng", разделенные запятыми'
-            value={this.state.inputCoordinates.join(', ')}
-            onChange={this.handleInputChange}
-            style={{ width: '300px', marginRight: '10px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
-          />
-          <input
-            type="text"
-            placeholder='Введите название полигона'
-            value={this.state.newPolygonName}
-            onChange={this.handlePolygonNameChange}
-            style={{ width: '200px', marginRight: '10px' }}
-          />
-          <button onClick={this.addPolygon}>Сохранить заливку</button>
-          <button onClick={this.clearMarkers}>Очистить маркеры</button>
-          <button onClick={this.toggleCreationMode}>
-            {this.state.creationMode ? 'Выключить режим заливки' : 'Включить режим заливки'}
-          </button>
-          <input
-            type="text"
-            placeholder='Введите название для поиска'
-            value={this.state.searchPolygonName}
-            onChange={this.handleSearchNameChange}
-            style={{ width: '200px', marginRight: '10px' }}
-          />
-          <button onClick={this.searchPolygonsByName}>Поиск по названию</button>
-          <button onClick={() => {
-            this.setState(prevState => ({
-              showPolygons: !prevState.showPolygons
-            }));
-          }}>
-            {this.state.showPolygons ? 'Скрыть полигоны' : 'Показать полигоны'}
-          </button>
-        </div>
-
-        <div style={{ position: 'absolute', top: 200, left: 10, zIndex: 1000, padding: '10px', borderRadius: '5px' }}>
-          <h3>Управление полями</h3>
-          <select onChange={this.handleFieldSelection} value={this.state.selectedFieldId || ''}>
-            <option value="" disabled>Выберите поле</option>
-            {this.state.fields.map(field => (
-              <option key={field.id} value={field.id}>{field.name}</option>
-            ))}
-          </select>
-          <input
-            type="text"
-            placeholder="Введите сезон"
-            value={this.state.selectedSeason}
-            onChange={this.handleSeasonInputChange}
-          />
-          <select onChange={this.handleFieldTypeSelection} value={this.state.selectedFieldType || ''}>
-            <option value="" disabled>Выберите культуру</option>
-            {this.state.fieldTypes.map(type => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
-          <button onClick={this.saveProperty}>Сохранить</button>
-        </div>
-
-        <SeasonForm
-          onSeasonCreated={this.handleSeasonCreated}
+      <div className="map">
+        <Sidebar
+          isSidebarVisible={this.state.isSidebarVisible}
+          toggleSidebar={this.toggleSidebar}
+          inputCoordinates={this.state.inputCoordinates}
+          newPolygonName={this.state.newPolygonName}
+          handleInputChange={this.handleInputChange}
+          handlePolygonNameChange={this.handlePolygonNameChange}
+          addPolygon={this.addPolygon}
+          clearMarkers={this.clearMarkers}
+          toggleCreationMode={this.toggleCreationMode}
+          creationMode={this.state.creationMode}
+          showPolygons={this.state.showPolygons}
+          setShowPolygons={(showPolygons) => this.setState({ showPolygons })}
+          fields={this.state.fields}
+          handleFieldSelection={this.handleFieldSelection}
+          selectedFieldId={this.state.selectedFieldId}
+          handleSeasonInputChange={this.handleSeasonInputChange}
+          selectedSeason={this.state.selectedSeason}
+          seasons={this.state.seasons}
+          handleFieldTypeSelection={this.handleFieldTypeSelection}
+          selectedFieldType={this.state.selectedFieldType}
+          fieldTypes={this.state.fieldTypes}
+          saveProperty={this.saveProperty}
+          handleSeasonCreated={this.handleSeasonCreated}
           polygons={this.state.polygons}
           selectedFieldTypes={this.state.selectedFieldTypes}
         />
@@ -643,7 +624,7 @@ class MapComponent extends React.Component {
           />
           {this.state.inputCoordinates.map((coord, index) => {
             const [lat, lng] = coord.split(' ').map(Number);
-            if (!isNaN(lat) && !isNaN(lng)) { // Проверка на валидность координат
+            if (!isNaN(lat) && !isNaN(lng)) {
               return (
                 <Marker
                   key={index}
@@ -654,7 +635,7 @@ class MapComponent extends React.Component {
                 />
               );
             }
-            return null; // Возвращаем null, если координаты не валидны
+            return null;
           })}
           {polylineCoordinates.length > 1 && (
             <Polyline positions={polylineCoordinates} color="blue" />
@@ -675,7 +656,7 @@ class MapComponent extends React.Component {
                 <Tooltip permanent direction="center" className="polygon-tooltip">
                   <span>{polygon.name}</span>
                 </Tooltip>
-                <Popup>
+                <Popup className="polygon-popup">
                   <div>
                     <p>Имя полигона: {polygon.name}</p>
                     <label>Выберите тип поля:</label>
@@ -695,31 +676,29 @@ class MapComponent extends React.Component {
             );
           })}
           {this.getFilteredFields().map(field => {
-            // Проверяем, что coordinates является массивом
             if (!Array.isArray(field.coordinates)) {
-                console.error('Некорректный формат координат:', field.coordinates);
-                return null;
+              console.error('Некорректный формат координат:', field.coordinates);
+              return null;
             }
 
             return (
-                <Polygon
-                    key={field.id}
-                    positions={field.coordinates}
-                    color="red"
-                   
-                    fillOpacity={0.5}
-                >
-                    <Popup>
-                        <div>
-                            <p>Название: {field.name}</p>
-                            <p>Площадь: {field.area} кв.м</p> {/* Убедитесь, что area правильно вычисляется */}
-                            <button onClick={() => this.editField(field.id)}>Редактировать</button>
-                            <button onClick={() => this.deleteField(field.id)}>Удалить</button> {/* Удаление поля */}
-                        </div>
-                    </Popup>
-                </Polygon>
+              <Polygon
+                key={field.id}
+                positions={field.coordinates}
+                color="red"
+                fillOpacity={0.5}
+              >
+                <Popup className="polygon-popup">
+                  <div>
+                    <p>Название: {field.name}</p>
+                    <p>Площадь: {field.area} кв.м</p>
+                    <button onClick={() => this.editField(field.id)}>Редактировать</button>
+                    <button onClick={() => this.deleteField(field.id)}>Удалить</button>
+                  </div>
+                </Popup>
+              </Polygon>
             );
-        })}
+          })}
         </Map>
       </div>
     );

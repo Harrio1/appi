@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('seed_colors', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('seed_id');
-            $table->string('color'); // Цвет семени
+            $table->string('color');
             $table->timestamps();
 
             $table->unique(['seed_id', 'color']);

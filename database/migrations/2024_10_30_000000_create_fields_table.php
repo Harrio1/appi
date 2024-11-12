@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->json('coordinates');
-            $table->double('area', 15, 2); // Измените тип данных на double
+            $table->double('area', 15, 2);
             $table->timestamps();
         });
     }
