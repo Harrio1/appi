@@ -11,6 +11,8 @@ import Sidebar from './Sidebar'; // Импортируем новый компо
 // указываем путь к файлам marker
 L.Icon.Default.imagePath = "https://unpkg.com/leaflet@1.5.0/dist/images/";
 
+axios.defaults.baseURL = 'http://appi.test/api';
+
 class MapComponent extends React.Component {
   state = {
     lat: 46.536032,
@@ -126,35 +128,41 @@ class MapComponent extends React.Component {
     console.log('Выбранный сезон ID:', seasonId);
 
     if (seasonId === '') {
-      this.setState({ currentSeasonId: null, selectedFieldTypes: {} });
+      try {
+        const response = await axios.get('http://appi.test/api/fields');
+        const fieldsData = response.data;
+
+        const allPolygons = fieldsData.map(field => ({
+          id: field.id,
+          coordinates: field.coordinates,
+          field_type: field.field_type,
+          color: field.color || this.state.fieldColors[field.field_type] || 'red',
+          name: field.name,
+          area: field.area
+        }));
+
+        this.setState({ currentSeasonId: null, polygons: allPolygons });
+      } catch (error) {
+        console.error('Ошибка при загрузке всех полей:', error);
+        alert('Ошибка при загрузке данных: ' + error.message);
+      }
       return;
     }
-
-    const seasonExists = this.state.seasons.some(season => season.id.toString() === seasonId);
-    if (!seasonExists) {
-      alert('Выбранный сезон не существует.');
-      return;
-    }
-
-    this.setState({ currentSeasonId: seasonId });
 
     try {
       const response = await axios.get(`http://appi.test/api/seasons/${seasonId}/fields`);
       const fieldsData = response.data;
 
-      const updatedPolygons = this.state.polygons.map(polygon => {
-        const fieldData = fieldsData.find(field => field.id === polygon.id);
-        if (fieldData) {
-          return {
-            ...polygon,
-            field_type: fieldData.field_type,
-            color: fieldData.color
-          };
-        }
-        return polygon;
-      });
+      const updatedPolygons = fieldsData.map(field => ({
+        id: field.id,
+        coordinates: field.coordinates,
+        field_type: field.field_type,
+        color: field.color || this.state.fieldColors[field.field_type] || 'red',
+        name: field.name,
+        area: field.area
+      }));
 
-      this.setState({ polygons: updatedPolygons });
+      this.setState({ currentSeasonId: seasonId, polygons: updatedPolygons });
     } catch (error) {
       console.error('Ошибка при загрузке данных полей:', error);
       alert('Ошибка при загрузке данных: ' + error.message);
@@ -177,7 +185,7 @@ class MapComponent extends React.Component {
       this.setState({ polygons, selectedFieldTypes: {} });
     } catch (error) {
       console.error('Ошибка при загрузке полигонов:', error);
-      alert('Ошибка при загрузке данных: ' + error.message);
+      alert('Ошибка при загрузе данных: ' + error.message);
     }
   };
 
@@ -429,7 +437,7 @@ class MapComponent extends React.Component {
       this.setState({ polygons });
     } catch (error) {
       console.error('Ошибка при загрузке полигонов:', error);
-      alert('Ошибка пи загрузке данных: ' + error.message);
+      alert('Ошибка при загрузке данных: ' + error.message);
     }
   };
 
@@ -447,6 +455,8 @@ class MapComponent extends React.Component {
 
     // Обновляем цвет поля в зависимости от выбранной культуры
     const selectedFieldColor = this.state.fieldColors[selectedFieldType] || 'red';
+    this.setState({ selectedFieldColor });
+
     this.setState(prevState => ({
       polygons: prevState.polygons.map(polygon => 
         polygon.id === prevState.selectedFieldId ? { ...polygon, color: selectedFieldColor } : polygon
@@ -455,13 +465,14 @@ class MapComponent extends React.Component {
   };
 
   saveProperty = async () => {
-    const { selectedFieldId, selectedSeason, selectedFieldType } = this.state;
-    if (!selectedFieldId || !selectedSeason || !selectedFieldType) {
-        alert('Пожалуйста, заполните все поля.');
-        return;
-    }
+    const { selectedFieldId, selectedSeason, selectedFieldType, selectedFieldColor } = this.state;
 
-    const selectedFieldColor = this.state.fieldColors[selectedFieldType] || 'red';
+    console.log('Проверка значений:', { selectedFieldId, selectedSeason, selectedFieldType, selectedFieldColor });
+
+    if (!selectedFieldId || !selectedSeason || !selectedFieldType || !selectedFieldColor) {
+      alert('Пожалуйста, заполните все поля.');
+      return;
+    }
 
     try {
         await axios.post('http://appi.test/api/fields/properties', {

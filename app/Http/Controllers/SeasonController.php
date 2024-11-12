@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Season;
+use App\Models\Field;
+use App\Models\Property;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -39,15 +41,16 @@ class SeasonController extends Controller
     public function getFieldsForSeason($seasonId)
     {
         try {
-            $season = Season::findOrFail($seasonId);
-            $fields = $season->fields; // Убедитесь, что связь настроена правильно
+            $properties = Property::where('season_id', $seasonId)->with('field')->get();
 
-            $formattedFields = $fields->map(function($field) {
+            $formattedFields = $properties->map(function($property) {
+                $field = $property->field;
                 return [
                     'id' => $field->id,
-                    'coordinates' => json_decode($field->coordinates, true),
-                    'color' => $field->color,
                     'name' => $field->name,
+                    'coordinates' => json_decode($field->coordinates, true),
+                    'field_type' => $property->field_type,
+                    'color' => $field->color,
                     'area' => $field->area
                 ];
             });

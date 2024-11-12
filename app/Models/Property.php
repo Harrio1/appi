@@ -9,7 +9,7 @@ class Property extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['field_id', 'season_id'];
+    protected $fillable = ['field_id', 'season_id', 'field_type', 'seed_color'];
 
     public function field()
     {

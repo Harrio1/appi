@@ -161,25 +161,17 @@ class FieldController extends Controller
                 return response()->json(['success' => false, 'error' => 'Сезон не найден'], 404);
             }
 
-            $seed = Seed::where('name', $validatedData['field_type'])->first();
-            if (!$seed) {
-                Log::error('Семя для выбранного типа поля не найдено: ' . $validatedData['field_type']);
-                return response()->json(['success' => false, 'error' => 'Семя для выбранного типа поля не найдено'], 404);
-            }
+            $seed = Seed::firstOrCreate(['name' => $validatedData['field_type']]);
 
-            $seedColor = SeedColor::where('seed_id', $seed->id)
-                                  ->where('color', $validatedData['seed_color'])
-                                  ->first();
-
-            if (!$seedColor) {
-                Log::error('Цвет для выбранной культуры не найден: ' . $validatedData['field_type']);
-                return response()->json(['success' => false, 'error' => 'Цвет для выбранной культуры не найден'], 404);
-            }
+            $seedColor = SeedColor::firstOrCreate(
+                ['seed_id' => $seed->id, 'color' => $validatedData['seed_color']]
+            );
 
             Property::create([
                 'field_id' => $validatedData['field_id'],
                 'season_id' => $season->id,
-                'field_type' => $validatedData['field_type']
+                'field_type' => $validatedData['field_type'],
+                'seed_color' => $validatedData['seed_color']
             ]);
 
             return response()->json(['success' => true, 'color' => $seedColor->color]);

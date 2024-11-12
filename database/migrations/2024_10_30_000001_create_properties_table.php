@@ -12,6 +12,8 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('field_id');
             $table->unsignedBigInteger('season_id');
+            $table->string('field_type');
+            $table->string('seed_color');
             $table->timestamps();
 
             $table->foreign('field_id')->references('id')->on('fields')->onDelete('cascade');

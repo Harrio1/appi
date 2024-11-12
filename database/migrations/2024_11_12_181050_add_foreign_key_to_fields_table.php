@@ -8,20 +8,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('fields', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->json('coordinates');
-            $table->decimal('area', 8, 2);
-            $table->unsignedBigInteger('season_id');
-            $table->timestamps();
-
+        Schema::table('fields', function (Blueprint $table) {
             $table->foreign('season_id')->references('id')->on('seasons')->onDelete('cascade');
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('fields');
+        Schema::table('fields', function (Blueprint $table) {
+            $table->dropForeign(['season_id']);
+        });
     }
-}; 
+};
