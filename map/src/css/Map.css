@@ -106,3 +106,14 @@
   font-size: 12px;
   line-height: 1.2;
 }
+
+.season-selector {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1000;
+  background-color: white;
+  padding: 5px;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}

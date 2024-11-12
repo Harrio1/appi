@@ -121,18 +121,44 @@ class MapComponent extends React.Component {
     }
   };
 
-  handleSeasonChange = (event) => {
+  handleSeasonChange = async (event) => {
     const seasonId = event.target.value;
     console.log('Выбранный сезон ID:', seasonId);
 
-    // Проверка на существование сезона
-    const seasonExists = this.state.seasons.some(season => season.id === seasonId);
-    if (!seasonExists) {
-        alert('Выбранный сезон не существует.');
-        return;
+    if (seasonId === '') {
+      this.setState({ currentSeasonId: null, selectedFieldTypes: {} });
+      return;
     }
 
-    this.setState({ currentSeasonId: seasonId }, this.loadPolygonsFromDatabase);
+    const seasonExists = this.state.seasons.some(season => season.id.toString() === seasonId);
+    if (!seasonExists) {
+      alert('Выбранный сезон не существует.');
+      return;
+    }
+
+    this.setState({ currentSeasonId: seasonId });
+
+    try {
+      const response = await axios.get(`http://appi.test/api/seasons/${seasonId}/fields`);
+      const fieldsData = response.data;
+
+      const updatedPolygons = this.state.polygons.map(polygon => {
+        const fieldData = fieldsData.find(field => field.id === polygon.id);
+        if (fieldData) {
+          return {
+            ...polygon,
+            field_type: fieldData.field_type,
+            color: fieldData.color
+          };
+        }
+        return polygon;
+      });
+
+      this.setState({ polygons: updatedPolygons });
+    } catch (error) {
+      console.error('Ошибка при загрузке данных полей:', error);
+      alert('Ошибка при загрузке данных: ' + error.message);
+    }
   };
 
   loadPolygonsFromDatabase = async () => {
@@ -395,14 +421,15 @@ class MapComponent extends React.Component {
           id: polygon.id,
           coordinates: coordinatesArray,
           color: polygon.color || 'red',
-          name: polygon.name
+          name: polygon.name,
+          area: polygon.area
         };
       });
 
       this.setState({ polygons });
     } catch (error) {
       console.error('Ошибка при загрузке полигонов:', error);
-      alert('Ошибка при загрузке данных: ' + error.message);
+      alert('Ошибка пи загрузке данных: ' + error.message);
     }
   };
 
@@ -437,7 +464,7 @@ class MapComponent extends React.Component {
     const selectedFieldColor = this.state.fieldColors[selectedFieldType] || 'red';
 
     try {
-        const response = await axios.post('http://appi.test/api/fields/properties', {
+        await axios.post('http://appi.test/api/fields/properties', {
             field_id: selectedFieldId,
             season_name: selectedSeason,
             field_type: selectedFieldType,
@@ -575,13 +602,9 @@ class MapComponent extends React.Component {
       polylineCoordinates.push(polylineCoordinates[0]);
     }
 
-    const filteredFields = this.getFilteredFields();
-
     return (
-      <div className="map">
+      <div className="map-container">
         <Sidebar
-          isSidebarVisible={this.state.isSidebarVisible}
-          toggleSidebar={this.toggleSidebar}
           inputCoordinates={this.state.inputCoordinates}
           newPolygonName={this.state.newPolygonName}
           handleInputChange={this.handleInputChange}
@@ -591,7 +614,7 @@ class MapComponent extends React.Component {
           toggleCreationMode={this.toggleCreationMode}
           creationMode={this.state.creationMode}
           showPolygons={this.state.showPolygons}
-          setShowPolygons={(showPolygons) => this.setState({ showPolygons })}
+          setShowPolygons={(show) => this.setState({ showPolygons: show })}
           fields={this.state.fields}
           handleFieldSelection={this.handleFieldSelection}
           selectedFieldId={this.state.selectedFieldId}
@@ -606,7 +629,14 @@ class MapComponent extends React.Component {
           polygons={this.state.polygons}
           selectedFieldTypes={this.state.selectedFieldTypes}
         />
-
+        <div className="season-selector">
+          <select onChange={this.handleSeasonChange} value={this.state.currentSeasonId || ''}>
+            <option value="">Выберите сезон</option>
+            {this.state.seasons.map(season => (
+              <option key={season.id} value={season.id}>{season.name}</option>
+            ))}
+          </select>
+        </div>
         <Map
           zoomControl={false}
           zoom={this.state.zoom}
@@ -641,8 +671,8 @@ class MapComponent extends React.Component {
             <Polyline positions={polylineCoordinates} color="blue" />
           )}
           {this.state.showPolygons && this.state.polygons.map(polygon => {
-            const selectedType = this.state.selectedFieldTypes[polygon.id];
-            const fillColor = this.state.fieldColors[selectedType] || polygon.color;
+            const fillColor = polygon.color;
+            const fieldType = polygon.field_type || 'Неизвестно';
 
             return (
               <Polygon
@@ -659,41 +689,8 @@ class MapComponent extends React.Component {
                 <Popup className="polygon-popup">
                   <div>
                     <p>Имя полигона: {polygon.name}</p>
-                    <label>Выберите тип поля:</label>
-                    <select
-                      value={selectedType || ''}
-                      onChange={(e) => this.handleFieldTypeChange(polygon.id, e)}
-                    >
-                      <option value="" disabled>Выберте тип</option>
-                      {this.state.fieldTypes.map(type => (
-                        <option key={type} value={type}>{type}</option>
-                      ))}
-                    </select>
-                    <p>Название семян: {this.state.seedNames[selectedType] || 'Не выбрано'}</p>
-                  </div>
-                </Popup>
-              </Polygon>
-            );
-          })}
-          {this.getFilteredFields().map(field => {
-            if (!Array.isArray(field.coordinates)) {
-              console.error('Некорректный формат координат:', field.coordinates);
-              return null;
-            }
-
-            return (
-              <Polygon
-                key={field.id}
-                positions={field.coordinates}
-                color="red"
-                fillOpacity={0.5}
-              >
-                <Popup className="polygon-popup">
-                  <div>
-                    <p>Название: {field.name}</p>
-                    <p>Площадь: {field.area} кв.м</p>
-                    <button onClick={() => this.editField(field.id)}>Редактировать</button>
-                    <button onClick={() => this.deleteField(field.id)}>Удалить</button>
+                    <p>Тип поля: {fieldType}</p>
+                    <p>Площадь: {polygon.area || 'Неизвестно'} кв.м</p>
                   </div>
                 </Popup>
               </Polygon>

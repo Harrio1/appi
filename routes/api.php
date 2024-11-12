@@ -25,7 +25,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::get('/seasons', [SeasonController::class, 'index']);
 Route::post('/seasons', [SeasonController::class, 'createNewSeason']);
 
-Route::get('/seasons/{season}/fields', [FieldController::class, 'index']);
+Route::get('/seasons/{season}/fields', [SeasonController::class, 'getFieldsForSeason']);
 Route::post('/seasons/{season}/fields', [FieldController::class, 'storeField']);
 
 Route::put('/fields/{field}', [FieldController::class, 'updateFieldType']);
