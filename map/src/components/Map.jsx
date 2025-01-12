@@ -21,7 +21,7 @@ class MapComponent extends React.Component {
     basemap: 'mapbox',
     polygons: [],
     inputCoordinates: [],
-    creationMode: true,
+    creationMode: false,
     selectedPolygonId: null,
     fieldTypes: ['Пшеница', 'Кукуруза', 'Соя', 'Подсолнечник', 'Рапс', 'Ячмень', 'Овес', 'Рис', 'Гречиха'],
     seedNames: {

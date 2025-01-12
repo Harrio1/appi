@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import SeasonForm from './SeasonForm';
+import React, { useState, useRef } from 'react';
+import Draggable from 'react-draggable';
 import '../css/Sidebar.css';
 
 const Sidebar = ({
@@ -28,6 +28,8 @@ const Sidebar = ({
   selectedFieldTypes
 }) => {
   const [isVisible, setIsVisible] = useState(true);
+  const [isPolygonModalOpen, setPolygonModalOpen] = useState(false);
+  const [isSeasonModalOpen, setSeasonModalOpen] = useState(false);
 
   const toggleSidebar = () => {
     setIsVisible(!isVisible);
@@ -37,27 +39,7 @@ const Sidebar = ({
     <div>
       <div className={`sidebar ${isVisible ? 'visible' : 'hidden'}`}>
         <div className="sidebar-content">
-          <h3>Форма полигона</h3>
-          <input
-            type="text"
-            placeholder='Введите координаты в формате "lat lng", разделенные запятыми'
-            value={inputCoordinates.join(', ')}
-            onChange={handleInputChange}
-          />
-          <input
-            type="text"
-            placeholder='Введите название полигона'
-            value={newPolygonName}
-            onChange={handlePolygonNameChange}
-          />
-          <button onClick={addPolygon}>Сохранить заливку</button>
-          <button onClick={clearMarkers}>Очистить маркеры</button>
-          <button onClick={toggleCreationMode}>
-            {creationMode ? 'Выключить режим заливки' : 'Включить режим заливки'}
-          </button>
-          <button onClick={() => setShowPolygons(!showPolygons)}>
-            {showPolygons ? 'Скрыть полигоны' : 'Показать полигоны'}
-          </button>
+          
 
           <h3>Управление полями</h3>
           <select onChange={handleFieldSelection} value={selectedFieldId || ''}>
@@ -79,17 +61,71 @@ const Sidebar = ({
             ))}
           </select>
           <button onClick={saveProperty}>Сохранить</button>
-
-          <SeasonForm
-            onSeasonCreated={handleSeasonCreated}
-            polygons={polygons}
-            selectedFieldTypes={selectedFieldTypes}
-          />
         </div>
+        <button onClick={() => setPolygonModalOpen(true)}>Открыть создание поля</button>
+          <button onClick={() => setSeasonModalOpen(true)}>Создать новый сезон</button>
       </div>
       <button className="side-button" onClick={toggleSidebar}>
         {isVisible ? '✕' : '☰'}
       </button>
+
+      {/* Polygon Modal */}
+      {isPolygonModalOpen && (
+        <Draggable handle=".modal-header">
+          <div className="modal">
+            <div className="modal-content">
+              <div className="modal-header">
+                <span className="close" onClick={() => setPolygonModalOpen(false)}>&times;</span>
+                <h2>Создание поля </h2>
+              </div>
+              <form>
+                <input
+                  type="text"
+                  placeholder='Введите координаты в формате "lat lng", разделенные запятыми'
+                  value={inputCoordinates.join(', ')}
+                  onChange={handleInputChange}
+                />
+                <input
+                  type="text"
+                  placeholder='Введите название полигона'
+                  value={newPolygonName}
+                  onChange={handlePolygonNameChange}
+                />
+                <button type="button" onClick={addPolygon}>Сохранить поле</button>
+                <button type="button" onClick={clearMarkers}>Очистить маркеры</button>
+                <button type="button" onClick={toggleCreationMode}>
+                  {creationMode ? 'Выключить режим маркера' : 'Включить режим маркера'}
+                </button>
+                <button type="button" onClick={() => setShowPolygons(!showPolygons)}>
+                  {showPolygons ? 'Скрыть полигоны' : 'Показать полигоны'}
+                </button>
+              </form>
+            </div>
+          </div>
+        </Draggable>
+      )}
+
+      {/* Season Modal */}
+      {isSeasonModalOpen && (
+        <Draggable handle=".modal-header">
+          <div className="modal">
+            <div className="modal-content">
+              <div className="modal-header">
+                <span className="close" onClick={() => setSeasonModalOpen(false)}>&times;</span>
+                <h2>Создать новый сезон</h2>
+              </div>
+              <form>
+                <input
+                  type="text"
+                  placeholder='Введите название сезона'
+                  // value и onChange для управления состоянием формы сезона
+                />
+                <button type="button" onClick={handleSeasonCreated}>Создать сезон</button>
+              </form>
+            </div>
+          </div>
+        </Draggable>
+      )}
     </div>
   );
 };
