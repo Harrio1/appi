@@ -595,6 +595,13 @@ class MapComponent extends React.Component {
     }));
   };
 
+  addNewFieldType = (name, color) => {
+    this.setState(prevState => ({
+      fieldTypes: [...prevState.fieldTypes, name],
+      fieldColors: { ...prevState.fieldColors, [name]: color }
+    }));
+  };
+
   render() {
     const center = [this.state.lat, this.state.lng];
     const basemapUrl = this.basemapsDict[this.state.basemap];
@@ -639,6 +646,7 @@ class MapComponent extends React.Component {
           handleSeasonCreated={this.handleSeasonCreated}
           polygons={this.state.polygons}
           selectedFieldTypes={this.state.selectedFieldTypes}
+          addNewFieldType={this.addNewFieldType}
         />
         <div className="season-selector">
           <select onChange={this.handleSeasonChange} value={this.state.currentSeasonId || ''}>

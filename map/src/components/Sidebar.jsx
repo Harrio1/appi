@@ -25,14 +25,29 @@ const Sidebar = ({
   saveProperty,
   handleSeasonCreated,
   polygons,
-  selectedFieldTypes
+  selectedFieldTypes,
+  addNewFieldType
 }) => {
   const [isVisible, setIsVisible] = useState(true);
   const [isPolygonModalOpen, setPolygonModalOpen] = useState(false);
   const [isSeasonModalOpen, setSeasonModalOpen] = useState(false);
+  const [isFieldTypeModalOpen, setFieldTypeModalOpen] = useState(false);
+  const [newFieldType, setNewFieldType] = useState('');
+  const [newFieldColor, setNewFieldColor] = useState('');
 
   const toggleSidebar = () => {
     setIsVisible(!isVisible);
+  };
+
+  const handleAddFieldType = () => {
+    if (newFieldType.trim() && newFieldColor.trim()) {
+      addNewFieldType(newFieldType, newFieldColor);
+      setNewFieldType('');
+      setNewFieldColor('');
+      setFieldTypeModalOpen(false);
+    } else {
+      alert('Пожалуйста, заполните все поля.');
+    }
   };
 
   return (
@@ -64,6 +79,7 @@ const Sidebar = ({
         </div>
         <button onClick={() => setPolygonModalOpen(true)}>Открыть создание поля</button>
           <button onClick={() => setSeasonModalOpen(true)}>Создать новый сезон</button>
+        <button onClick={() => setFieldTypeModalOpen(true)}>Добавить новую культуру</button>
       </div>
       <button className="side-button" onClick={toggleSidebar}>
         {isVisible ? '✕' : '☰'}
@@ -121,6 +137,34 @@ const Sidebar = ({
                   // value и onChange для управления состоянием формы сезона
                 />
                 <button type="button" onClick={handleSeasonCreated}>Создать сезон</button>
+              </form>
+            </div>
+          </div>
+        </Draggable>
+      )}
+
+      {/* Field Type Modal */}
+      {isFieldTypeModalOpen && (
+        <Draggable handle=".modal-header">
+          <div className="modal">
+            <div className="modal-content">
+              <div className="modal-header">
+                <span className="close" onClick={() => setFieldTypeModalOpen(false)}>&times;</span>
+                <h2>Добавить новую культуру</h2>
+              </div>
+              <form>
+                <input
+                  type="text"
+                  placeholder='Введите название культуры'
+                  value={newFieldType}
+                  onChange={(e) => setNewFieldType(e.target.value)}
+                />
+                <input
+                  type="color"
+                  value={newFieldColor}
+                  onChange={(e) => setNewFieldColor(e.target.value)}
+                />
+                <button type="button" onClick={handleAddFieldType}>Добавить культуру</button>
               </form>
             </div>
           </div>
