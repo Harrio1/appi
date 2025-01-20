@@ -26,7 +26,8 @@ const Sidebar = ({
   handleSeasonCreated,
   polygons,
   selectedFieldTypes,
-  addNewFieldType
+  addNewFieldType,
+  fieldColors
 }) => {
   const [isVisible, setIsVisible] = useState(true);
   const [isPolygonModalOpen, setPolygonModalOpen] = useState(false);
@@ -34,6 +35,7 @@ const Sidebar = ({
   const [isFieldTypeModalOpen, setFieldTypeModalOpen] = useState(false);
   const [newFieldType, setNewFieldType] = useState('');
   const [newFieldColor, setNewFieldColor] = useState('');
+  const [newSeasonName, setNewSeasonName] = useState('');
 
   const toggleSidebar = () => {
     setIsVisible(!isVisible);
@@ -59,22 +61,53 @@ const Sidebar = ({
           <h3>Управление полями</h3>
           <select onChange={handleFieldSelection} value={selectedFieldId || ''}>
             <option value="" disabled>Выберите поле</option>
-            {fields.map(field => (
-              <option key={field.id} value={field.id}>{field.name}</option>
+            {fields.map((field, index) => (
+              <option key={field.id || index} value={field.id}>{field.name}</option>
             ))}
           </select>
           <select onChange={handleSeasonInputChange} value={selectedSeason || ''}>
             <option value="" disabled>Выберите сезон</option>
-            {seasons.map(season => (
-              <option key={season.id} value={season.name}>{season.name}</option>
+            {seasons.map((season, index) => (
+              <option key={season.id || index} value={season.name}>{season.name}</option>
             ))}
           </select>
+<<<<<<< HEAD
+<<<<<<< HEAD
           <select onChange={handleFieldTypeSelection} value={selectedFieldType || ''}>
             <option value="" disabled>Выберите культуру</option>
-            {fieldTypes.map(type => (
-              <option key={type} value={type}>{type}</option>
+            {fieldTypes.map((type, index) => (
+              <option key={type || index} value={type}>{type}</option>
             ))}
           </select>
+=======
+=======
+>>>>>>> b673b050222f8980401590cb32418dcccfe94703
+          <div className="custom-select">
+            <div className="selected-option">
+              {selectedFieldType ? (
+                <span>
+                  <span className="color-box" style={{ backgroundColor: fieldColors[selectedFieldType] || 'black' }}></span>
+                  {selectedFieldType}
+                </span>
+              ) : 'Выберите культуру'}
+            </div>
+            <div className="options">
+              {fieldTypes.map(type => (
+                <div 
+                  key={type} 
+                  className="option"
+                  onClick={() => handleFieldTypeSelection({ target: { value: type } })}
+                >
+                  <span className="color-box" style={{ backgroundColor: fieldColors[type] || 'black' }}></span>
+                  {type}
+                </div>
+              ))}
+            </div>
+          </div>
+<<<<<<< HEAD
+>>>>>>> b673b050222f8980401590cb32418dcccfe94703
+=======
+>>>>>>> b673b050222f8980401590cb32418dcccfe94703
           <button onClick={saveProperty}>Сохранить</button>
         </div>
         <button onClick={() => setPolygonModalOpen(true)}>Открыть создание поля</button>
@@ -134,9 +167,12 @@ const Sidebar = ({
                 <input
                   type="text"
                   placeholder='Введите название сезона'
-                  // value и onChange для управления состоянием формы сезона
+                  value={newSeasonName}
+                  onChange={(e) => setNewSeasonName(e.target.value)}
                 />
-                <button type="button" onClick={handleSeasonCreated}>Создать сезон</button>
+                <button type="button" onClick={() => handleSeasonCreated({ name: newSeasonName })}>
+                  Создать сезон
+                </button>
               </form>
             </div>
           </div>

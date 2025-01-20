@@ -12,8 +12,8 @@ return new class extends Migration
             $table->bigIncrements('id');
             $table->string('name');
             $table->json('coordinates');
-            $table->decimal('area', 8, 2);
-            $table->unsignedBigInteger('season_id');
+            $table->decimal('area', 15, 2);
+            $table->unsignedBigInteger('season_id')->nullable(); // Сделать nullable, если это допустимо
             $table->timestamps();
         });
     }

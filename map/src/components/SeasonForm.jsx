@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { API_URL } from '../config/api';
 
 const SeasonForm = ({ onSeasonCreated, polygons, selectedFieldTypes }) => {
   const [seasonName, setSeasonName] = useState('');
@@ -14,7 +15,7 @@ const SeasonForm = ({ onSeasonCreated, polygons, selectedFieldTypes }) => {
     }
 
     try {
-      const response = await axios.post('http://appi.test/api/seasons', {
+      const response = await axios.post(API_URL + '/seasons', {
         name: seasonName
       });
 

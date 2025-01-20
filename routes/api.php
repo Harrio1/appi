@@ -22,8 +22,11 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-Route::get('/seasons', [SeasonController::class, 'index']);
-Route::post('/seasons', [SeasonController::class, 'createNewSeason']);
+Route::prefix('api')->group(function () {
+    Route::get('/fields', [FieldController::class, 'index']);
+    Route::get('/seeds', [SeedController::class, 'index']);
+    Route::get('/seasons', [SeasonController::class, 'index']);
+});
 
 Route::get('/seasons/{season}/fields', [SeasonController::class, 'getFieldsForSeason']);
 Route::post('/seasons/{season}/fields', [FieldController::class, 'storeField']);
@@ -32,12 +35,9 @@ Route::put('/fields/{field}', [FieldController::class, 'updateFieldType']);
 Route::put('/fields/{id}', [FieldController::class, 'update']);
 Route::delete('/fields/{id}', [FieldController::class, 'destroy']);
 
-Route::get('/seeds', [SeedController::class, 'index']);
-
-Route::get('/fields', [FieldController::class, 'index']);
-Route::post('/fields', [FieldController::class, 'storeField']);
-
 Route::post('/fields/properties', [FieldController::class, 'storeProperty']);
 
 Route::post('/fields/by-name', [FieldController::class, 'getPolygonsByName']);
+
+Route::post('/fields', [FieldController::class, 'store']);
 

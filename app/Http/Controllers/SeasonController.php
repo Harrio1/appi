@@ -19,10 +19,14 @@ class SeasonController extends Controller
     public function createNewSeason(Request $request)
     {
         $validatedData = $request->validate([
-            'name' => 'required|string',
+            'name' => 'required|string|unique:seasons,name',
         ]);
 
+        Log::info('Создание нового сезона с данными:', $validatedData);
+
         $season = Season::create(['name' => $validatedData['name']]);
+
+        Log::info('Созданный сезон:', ['season' => $season]);
 
         return response()->json($season, 201);
     }

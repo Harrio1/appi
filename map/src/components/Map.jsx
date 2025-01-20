@@ -7,11 +7,9 @@ import axios from 'axios';
 import * as turf from '@turf/turf'; // Импортируем turf
 import SeasonForm from './SeasonForm'; // Импортируем новый компонент
 import Sidebar from './Sidebar'; // Импортируем новый компонент
-
+import { API_URL } from '../config/api';
 // указываем путь к файлам marker
 L.Icon.Default.imagePath = "https://unpkg.com/leaflet@1.5.0/dist/images/";
-
-axios.defaults.baseURL = 'http://appi.test/api';
 
 class MapComponent extends React.Component {
   state = {
@@ -82,7 +80,7 @@ class MapComponent extends React.Component {
 
   loadSeasons = async () => {
     try {
-      const response = await axios.get('http://appi.test/api/seasons');
+      const response = await axios.get(`${API_URL}/seasons`);
       this.setState({ seasons: response.data });
     } catch (error) {
       console.error('Ошибка при загрузке сезонов:', error);
@@ -99,7 +97,7 @@ class MapComponent extends React.Component {
         }))
       });
 
-      const response = await axios.post('http://appi.test/api/seasons', {
+      const response = await axios.post(`${API_URL}/api/seasons`, {
         name: this.state.newSeasonName,
         seeds: this.state.polygons.map(polygon => ({
           id: polygon.id,
@@ -129,7 +127,7 @@ class MapComponent extends React.Component {
 
     if (seasonId === '') {
       try {
-        const response = await axios.get('http://appi.test/api/fields');
+        const response = await axios.get(`${API_URL}/fields`);
         const fieldsData = response.data;
 
         const allPolygons = fieldsData.map(field => ({
@@ -150,7 +148,7 @@ class MapComponent extends React.Component {
     }
 
     try {
-      const response = await axios.get(`http://appi.test/api/seasons/${seasonId}/fields`);
+      const response = await axios.get(`${API_URL}/seasons/${seasonId}/fields`);
       const fieldsData = response.data;
 
       const updatedPolygons = fieldsData.map(field => ({
@@ -173,7 +171,7 @@ class MapComponent extends React.Component {
     if (!this.state.currentSeasonId) return;
 
     try {
-      const response = await axios.get(`http://appi.test/api/seasons/${this.state.currentSeasonId}/fields`);
+      const response = await axios.get(`${API_URL}/api/seasons/${this.state.currentSeasonId}/fields`);
       const polygonsData = response.data;
       console.log('Загруженные данные полигонов:', polygonsData);
       const polygons = polygonsData.map(polygon => ({
@@ -231,11 +229,12 @@ class MapComponent extends React.Component {
       const newPolygon = {
         coordinates: coordinates,
         name: newPolygonName,
-        area: area
+        area: area,
+        season_id: this.state.currentSeasonId
       };
 
       try {
-        const response = await axios.post('http://appi.test/api/fields', newPolygon);
+        const response = await axios.post(`${API_URL}/fields`, newPolygon);
         console.log('Ответ сервера:', response.data);
 
         if (response.data && response.data.success && response.data.id && response.data.name) {
@@ -260,7 +259,7 @@ class MapComponent extends React.Component {
           alert(`Не удалось сохранить полигон: ${errorMessage}`);
         }
       } catch (error) {
-        console.error('Ошибка пр добавлении полигона:', error);
+        console.error('Ошибка при добавлении полигона:', error);
         alert(`Ошибка: ${error.message}`);
       }
     } else {
@@ -341,7 +340,7 @@ class MapComponent extends React.Component {
 
   loadSeeds = async () => {
     try {
-      const response = await axios.get('http://appi.test/api/seeds');
+      const response = await axios.get(`${API_URL}/seeds`);
       const seeds = response.data;
       this.setState({ seeds });
     } catch (error) {
@@ -375,7 +374,7 @@ class MapComponent extends React.Component {
     }
 
     try {
-      const response = await axios.put(`http://appi.test/api/fields/${editFieldId}`, {
+      const response = await axios.put(`${API_URL}/api/fields/${editFieldId}`, {
         name: newFieldName,
         coordinates: newFieldCoordinates,
         area: parseFloat(newFieldArea)
@@ -419,7 +418,7 @@ class MapComponent extends React.Component {
 
   loadAllPolygons = async () => {
     try {
-      const response = await axios.get('http://appi.test/api/fields');
+      const response = await axios.get(`${API_URL}/fields`);
       const polygonsData = response.data;
       console.log('Загруженные данные полигонов:', polygonsData);
 
@@ -475,7 +474,7 @@ class MapComponent extends React.Component {
     }
 
     try {
-        await axios.post('http://appi.test/api/fields/properties', {
+        await axios.post(`${API_URL}/fields/properties`, {
             field_id: selectedFieldId,
             season_name: selectedSeason,
             field_type: selectedFieldType,
@@ -507,7 +506,7 @@ class MapComponent extends React.Component {
     }
 
     try {
-      const response = await axios.post('http://appi.test/api/fields/by-name', { name: searchPolygonName });
+      const response = await axios.post(`${API_URL}/fields/by-name`, { name: searchPolygonName });
       const polygonsData = response.data;
       console.log('Найденные полигоны:', polygonsData);
 
@@ -545,7 +544,7 @@ class MapComponent extends React.Component {
 
   loadFields = async () => {
     try {
-      const response = await axios.get('http://appi.test/api/fields');
+      const response = await axios.get(`${API_URL}/fields`);
       // Убедитесь, что response.data является массивом объектов
       if (Array.isArray(response.data)) {
         this.setState({ fields: response.data });
@@ -557,16 +556,23 @@ class MapComponent extends React.Component {
     }
   };
 
-  handleSeasonCreated = (newSeason) => {
-    this.setState((prevState) => ({
-      seasons: [...prevState.seasons, newSeason],
-      currentSeasonId: newSeason.id,
-    }));
+  handleSeasonCreated = async (newSeason) => {
+    try {
+      const response = await axios.post(`${API_URL}/seasons`, newSeason);
+      this.setState((prevState) => ({
+        seasons: [...prevState.seasons, response.data],
+        currentSeasonId: response.data.id,
+      }));
+      alert('Сезон успешно создан!');
+    } catch (error) {
+      console.error('Ошибка при создании нового сезона:', error);
+      alert('Ошибка при создании нового сезона: ' + error.message);
+    }
   };
 
   deleteField = async (fieldId) => {
     try {
-      await axios.delete(`http://appi.test/api/fields/${fieldId}`);
+      await axios.delete(`${API_URL}/fields/${fieldId}`);
       this.setState(prevState => ({
         fields: prevState.fields.filter(field => field.id !== fieldId)
       }));
@@ -600,6 +606,15 @@ class MapComponent extends React.Component {
       fieldTypes: [...prevState.fieldTypes, name],
       fieldColors: { ...prevState.fieldColors, [name]: color }
     }));
+  };
+
+  loadPolygons = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/fields`);
+      this.setState({ polygons: response.data });
+    } catch (error) {
+      console.error('Ошибка при загрузке полигонов:', error);
+    }
   };
 
   render() {
@@ -647,12 +662,13 @@ class MapComponent extends React.Component {
           polygons={this.state.polygons}
           selectedFieldTypes={this.state.selectedFieldTypes}
           addNewFieldType={this.addNewFieldType}
+          fieldColors={this.state.fieldColors}
         />
         <div className="season-selector">
           <select onChange={this.handleSeasonChange} value={this.state.currentSeasonId || ''}>
             <option value="">Выберите сезон</option>
-            {this.state.seasons.map(season => (
-              <option key={season.id} value={season.id}>{season.name}</option>
+            {this.state.seasons.map((season, index) => (
+              <option key={season.id || index} value={season.id}>{season.name}</option>
             ))}
           </select>
         </div>
