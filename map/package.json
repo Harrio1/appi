@@ -40,6 +40,7 @@
     "leaflet-velocity": "^1.6.0",
     "leaflet.markercluster": "^1.4.1",
     "mini-css-extract-plugin": "^2.4.5",
+    "mutationobserver-shim": "^0.3.7",
     "mysql2": "^3.11.3",
     "pg": "^8.13.0",
     "postcss": "^8.4.4",

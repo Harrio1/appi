@@ -647,6 +647,7 @@ class MapComponent extends React.Component {
           polygons={this.state.polygons}
           selectedFieldTypes={this.state.selectedFieldTypes}
           addNewFieldType={this.addNewFieldType}
+          fieldColors={this.state.fieldColors}
         />
         <div className="season-selector">
           <select onChange={this.handleSeasonChange} value={this.state.currentSeasonId || ''}>

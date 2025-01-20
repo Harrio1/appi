@@ -26,7 +26,8 @@ const Sidebar = ({
   handleSeasonCreated,
   polygons,
   selectedFieldTypes,
-  addNewFieldType
+  addNewFieldType,
+  fieldColors
 }) => {
   const [isVisible, setIsVisible] = useState(true);
   const [isPolygonModalOpen, setPolygonModalOpen] = useState(false);
@@ -69,12 +70,28 @@ const Sidebar = ({
               <option key={season.id} value={season.name}>{season.name}</option>
             ))}
           </select>
-          <select onChange={handleFieldTypeSelection} value={selectedFieldType || ''}>
-            <option value="" disabled>Выберите культуру</option>
-            {fieldTypes.map(type => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
+          <div className="custom-select">
+            <div className="selected-option">
+              {selectedFieldType ? (
+                <span>
+                  <span className="color-box" style={{ backgroundColor: fieldColors[selectedFieldType] || 'black' }}></span>
+                  {selectedFieldType}
+                </span>
+              ) : 'Выберите культуру'}
+            </div>
+            <div className="options">
+              {fieldTypes.map(type => (
+                <div 
+                  key={type} 
+                  className="option"
+                  onClick={() => handleFieldTypeSelection({ target: { value: type } })}
+                >
+                  <span className="color-box" style={{ backgroundColor: fieldColors[type] || 'black' }}></span>
+                  {type}
+                </div>
+              ))}
+            </div>
+          </div>
           <button onClick={saveProperty}>Сохранить</button>
         </div>
         <button onClick={() => setPolygonModalOpen(true)}>Открыть создание поля</button>
