@@ -71,17 +71,13 @@ const Sidebar = ({
               <option key={season.id || index} value={season.name}>{season.name}</option>
             ))}
           </select>
-<<<<<<< HEAD
-<<<<<<< HEAD
           <select onChange={handleFieldTypeSelection} value={selectedFieldType || ''}>
             <option value="" disabled>Выберите культуру</option>
             {fieldTypes.map((type, index) => (
               <option key={type || index} value={type}>{type}</option>
             ))}
           </select>
-=======
-=======
->>>>>>> b673b050222f8980401590cb32418dcccfe94703
+
           <div className="custom-select">
             <div className="selected-option">
               {selectedFieldType ? (
@@ -104,10 +100,6 @@ const Sidebar = ({
               ))}
             </div>
           </div>
-<<<<<<< HEAD
->>>>>>> b673b050222f8980401590cb32418dcccfe94703
-=======
->>>>>>> b673b050222f8980401590cb32418dcccfe94703
           <button onClick={saveProperty}>Сохранить</button>
         </div>
         <button onClick={() => setPolygonModalOpen(true)}>Открыть создание поля</button>
