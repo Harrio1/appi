@@ -16,7 +16,7 @@ class MapComponent extends React.Component {
     lat: 46.536032,
     lng: 41.031736,
     zoom: 10,
-    basemap: 'mapbox',
+    basemap: 'osm',
     polygons: [],
     inputCoordinates: [],
     creationMode: false,
