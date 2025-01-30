@@ -522,17 +522,18 @@ class MapComponent extends React.Component {
     this.cancelTokenSource && this.cancelTokenSource.cancel('Component unmounted');
   }
 
-  handleMarkerDragEnd = (newPosition, index) => {
+  handleMarkerDoubleClick = (index) => {
     this.setState(prevState => {
-      const newCoordinates = [...prevState.inputCoordinates];
-      newCoordinates[index] = `${newPosition.lat} ${newPosition.lng}`;
+      const newCoordinates = prevState.inputCoordinates.filter((_, i) => i !== index);
       return { inputCoordinates: newCoordinates };
     });
   };
 
-  handleMarkerDoubleClick = (index) => {
+  handleMarkerDragEnd = (e, index) => {
+    const { lat, lng } = e.target.getLatLng();
     this.setState(prevState => {
-      const newCoordinates = prevState.inputCoordinates.filter((_, i) => i !== index);
+      const newCoordinates = [...prevState.inputCoordinates];
+      newCoordinates[index] = `${lat} ${lng}`;
       return { inputCoordinates: newCoordinates };
     });
   };
@@ -628,8 +629,8 @@ class MapComponent extends React.Component {
 
     const polylineCoordinates = this.state.inputCoordinates.map(coord => {
       const [lat, lng] = coord.split(' ').map(Number);
-      return [lat, lng];
-    });
+      return !isNaN(lat) && !isNaN(lng) ? [lat, lng] : null;
+    }).filter(coord => coord !== null);
 
     if (polylineCoordinates.length > 1 && (polylineCoordinates[0][0] !== polylineCoordinates[polylineCoordinates.length - 1][0] || polylineCoordinates[0][1] !== polylineCoordinates[polylineCoordinates.length - 1][1])) {
       polylineCoordinates.push(polylineCoordinates[0]);
@@ -681,10 +682,10 @@ class MapComponent extends React.Component {
           className="map"
           dragging={true}
           onClick={this.handleMapClick}
+          attributionControl={false}
         >
           <ZoomControl position={'bottomright'} />
           <TileLayer
-            attribution='&amp;copy <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
             url={basemapUrl}
           />
           {this.state.inputCoordinates.map((coord, index) => {

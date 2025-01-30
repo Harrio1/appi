@@ -1,5 +1,8 @@
 <?php
 
+$host = getenv('HOST') ?: '192.168.1.116';
+$port = getenv('PORT') ?: '3003';
+
 return [
 
     /*
@@ -19,7 +22,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['http://localhost:3003'],
+    'allowed_origins' => ["http://{$host}:{$port}"],
 
     'allowed_origins_patterns' => [],
 
