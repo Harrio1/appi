@@ -1,0 +1,29 @@
+.error {
+  color: red;
+  padding: 1rem;
+  border: 1px solid red;
+  background-color: #ffe6e6;
+  border-radius: 4px;
+  margin: 1rem 0;
+}
+
+.field-component {
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin: 1rem 0;
+}
+
+.field-component ul {
+  list-style: none;
+  padding: 0;
+}
+
+.field-component li {
+  padding: 0.5rem;
+  border-bottom: 1px solid #eee;
+}
+
+.field-component li:last-child {
+  border-bottom: none;
+} 

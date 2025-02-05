@@ -97,28 +97,44 @@ class FieldController extends Controller
 
     public function store(Request $request)
     {
-        $validatedData = $request->validate([
-            'name' => 'required|string|max:255',
-            'coordinates' => 'required|string',
-            'area' => 'required|numeric|min:0',
-            'season_name' => 'required|string|exists:seasons,name'
-        ]);
+        try {
+            $validatedData = $request->validate([
+                'coordinates' => 'required|array',
+                'name' => 'required|string|max:255|unique:fields,name',
+                'area' => 'required|numeric|min:0',
+                'season_id' => 'nullable|exists:seasons,id'
+            ]);
 
-        $season = Season::where('name', $validatedData['season_name'])->firstOrFail();
+            // Отбрасываем дробную часть без округления
+            $area = (int)$validatedData['area'];
 
-        $field = Field::create([
-            'name' => $validatedData['name'],
-            'coordinates' => $validatedData['coordinates'],
-            'area' => $validatedData['area'],
-            'season_id' => $season->id
-        ]);
+            // Проверяем, что число не превышает 9 цифр
+            if ($area > 999999999) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Площадь не может превышать 999,999,999'
+                ], 400);
+            }
 
-        Property::create([
-            'field_id' => $field->id,
-            'season_id' => $season->id
-        ]);
+            $field = Field::create([
+                'name' => $validatedData['name'],
+                'coordinates' => json_encode($validatedData['coordinates']),
+                'area' => $area,
+                'season_id' => $validatedData['season_id'] ?? null
+            ]);
 
-        return response()->json(['success' => true, 'field' => $field]);
+            return response()->json([
+                'success' => true,
+                'id' => $field->id,
+                'name' => $field->name
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Ошибка при создании поля: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function update(Request $request, $id)

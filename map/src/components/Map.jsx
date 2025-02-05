@@ -5,7 +5,6 @@ import '../css/Map.css';
 import { connect } from "react-redux";
 import axios from 'axios';
 import * as turf from '@turf/turf'; // Импортируем turf
-import SeasonForm from './SeasonForm'; // Импортируем новый компонент
 import Sidebar from './Sidebar'; // Импортируем новый компонент
 import { API_URL } from '../config/api';
 // указываем путь к файлам marker
@@ -60,13 +59,12 @@ class MapComponent extends React.Component {
     showPolygonForm: true,
     showFieldManagementForm: true,
     isSidebarVisible: true,
-  };
-
-  basemapsDict = {
-    osm: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    hot: "https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
-    dark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
-    mapbox: "https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}.png"
+    basemapsDict: {
+      osm: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      hot: "https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
+      dark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
+      mapbox: "https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}.png"
+    },
   };
 
   colors = ['red'];
@@ -198,72 +196,62 @@ class MapComponent extends React.Component {
   };
 
   addPolygon = async () => {
-    const { inputCoordinates, newPolygonName, polygons } = this.state;
+    const { inputCoordinates, newPolygonName, polygons, currentSeasonId } = this.state;
 
-    // Проверка на пустое название
     if (!newPolygonName.trim()) {
-      alert('Напишите название поля');
-      return;
+        alert('Напишите название поля');
+        return;
     }
 
-    // Проверка на уникальность имени полигона
     const isNameTaken = polygons.some(polygon => polygon.name === newPolygonName);
     if (isNameTaken) {
-      alert('Имя поля занято');
-      return;
+        alert('Имя поля занято');
+        return;
     }
 
     if (inputCoordinates.length >= 4 && inputCoordinates.length <= 9) {
-      const coordinates = inputCoordinates.map(coord => {
-        const [lat, lng] = coord.split(' ').map(Number);
-        return [lat, lng]; // Убедитес, что порядок [lat, lng] правильный
-      });
+        const coordinates = inputCoordinates.map(coord => {
+            const [lat, lng] = coord.split(' ').map(Number);
+            return [lat, lng];
+        });
 
-      // Добавление первой координаты в конец, если они не совпадают
-      if (coordinates.length > 0 && (coordinates[0][0] !== coordinates[coordinates.length - 1][0] || coordinates[0][1] !== coordinates[coordinates.length - 1][1])) {
-        coordinates.push(coordinates[0]);
-      }
-
-      const area = this.calculateArea(coordinates);
-
-      const newPolygon = {
-        coordinates: coordinates,
-        name: newPolygonName,
-        area: area,
-        season_id: this.state.currentSeasonId
-      };
-
-      try {
-        const response = await axios.post(`${API_URL}/fields`, newPolygon);
-        console.log('Ответ сервера:', response.data);
-
-        if (response.data && response.data.success && response.data.id && response.data.name) {
-          const addedPolygon = {
-            id: response.data.id,
-            coordinates: coordinates,
-            color: 'red',
-            name: response.data.name,
-            area: newPolygon.area
-          };
-
-          this.setState(prevState => ({
-            polygons: [...prevState.polygons, addedPolygon],
-            inputCoordinates: [],
-            newPolygonName: ''
-          }));
-
-          console.log("Полигон добавлен:", addedPolygon);
-        } else {
-          const errorMessage = response.data.error || 'Неизвестная ошиб';
-          console.error('Ошибка при давлении полигона:', errorMessage);
-          alert(`Не удалось сохранить полигон: ${errorMessage}`);
+        if (coordinates.length > 0 && (coordinates[0][0] !== coordinates[coordinates.length - 1][0] || coordinates[0][1] !== coordinates[coordinates.length - 1][1])) {
+            coordinates.push(coordinates[0]);
         }
-      } catch (error) {
-        console.error('Ошибка при добавлении полигона:', error);
-        alert(`Ошибка: ${error.message}`);
-      }
+
+        const area = this.calculateArea(coordinates);
+
+        try {
+            const response = await axios.post(`${API_URL}/fields`, {
+                coordinates: coordinates,
+                name: newPolygonName,
+                area: area,
+                season_id: currentSeasonId
+            });
+
+            if (response.data && response.data.success) {
+                const addedPolygon = {
+                    id: response.data.id,
+                    coordinates: coordinates,
+                    color: 'red',
+                    name: response.data.name,
+                    area: area
+                };
+
+                this.setState(prevState => ({
+                    polygons: [...prevState.polygons, addedPolygon],
+                    inputCoordinates: [],
+                    newPolygonName: ''
+                }));
+            } else {
+                alert('Ошибка при сохранении полигона');
+            }
+        } catch (error) {
+            console.error('Ошибка при добавлении полигона:', error);
+            alert(`Ошибка: ${error.message}`);
+        }
     } else {
-      alert("Введите от 4 до 9 координат в формате 'lat lng', разделенные запятыми.");
+        alert("Введите от 4 до 9 координат в формате 'lat lng', разделенные запятыми.");
     }
   };
 
@@ -539,8 +527,9 @@ class MapComponent extends React.Component {
   };
 
   handleInputChange = (event) => {
-    const inputCoordinates = event.target.value.split(',').map(coord => coord.trim());
-    this.setState({ inputCoordinates });
+    const inputValue = event.target.value;
+    const coordinates = inputValue.split(',').map(coord => coord.trim());
+    this.setState({ inputCoordinates: coordinates });
   };
 
   loadFields = async () => {
@@ -559,15 +548,24 @@ class MapComponent extends React.Component {
 
   handleSeasonCreated = async (newSeason) => {
     try {
-      const response = await axios.post(`${API_URL}/seasons`, newSeason);
-      this.setState((prevState) => ({
-        seasons: [...prevState.seasons, response.data],
-        currentSeasonId: response.data.id,
-      }));
-      alert('Сезон успешно создан!');
+        const response = await axios.post(`${API_URL}/seasons`, {
+            name: newSeason.name
+        });
+
+        if (response.data && response.data.id) {
+            this.setState(prevState => ({
+                seasons: [...prevState.seasons, response.data],
+                currentSeasonId: response.data.id,
+                newSeasonName: ''
+            }));
+            alert('Сезон успешно создан!');
+            console.log('Ответ сервера:', response.data);
+        } else {
+            throw new Error('Не удалось получить данные созданного сезона');
+        }
     } catch (error) {
-      console.error('Ошибка при создании нового сезона:', error);
-      alert('Ошибка при создании нового сезона: ' + error.message);
+        console.error('Ошибка при создании нового сезона:', error);
+        alert('Ошибка при создании нового сезона: ' + error.message);
     }
   };
 
@@ -620,7 +618,7 @@ class MapComponent extends React.Component {
 
   render() {
     const center = [this.state.lat, this.state.lng];
-    const basemapUrl = this.basemapsDict[this.state.basemap];
+    const basemapUrl = this.state.basemapsDict[this.state.basemap];
 
     if (!basemapUrl) {
       console.error('Basemap URL is undefined');
@@ -665,14 +663,6 @@ class MapComponent extends React.Component {
           addNewFieldType={this.addNewFieldType}
           fieldColors={this.state.fieldColors}
         />
-        <div className="season-selector">
-          <select onChange={this.handleSeasonChange} value={this.state.currentSeasonId || ''}>
-            <option value="">Выберите сезон</option>
-            {this.state.seasons.map((season, index) => (
-              <option key={season.id || index} value={season.id}>{season.name}</option>
-            ))}
-          </select>
-        </div>
         <Map
           zoomControl={false}
           zoom={this.state.zoom}
@@ -733,6 +723,22 @@ class MapComponent extends React.Component {
             );
           })}
         </Map>
+        <div className="bottom-controls">
+          <div className="season-selector">
+            <select onChange={this.handleSeasonChange} value={this.state.currentSeasonId || ''}>
+              <option value="">Выберите сезон</option>
+              {this.state.seasons.map((season, index) => (
+                <option key={season.id || index} value={season.id}>{season.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="basemap-selector">
+            <button onClick={() => this.setState({ basemap: 'osm' })}>OSM</button>
+            <button onClick={() => this.setState({ basemap: 'hot' })}>HOT</button>
+            <button onClick={() => this.setState({ basemap: 'dark' })}>DARK</button>
+            <button onClick={() => this.setState({ basemap: 'mapbox' })}>MAPBOX</button>
+          </div>
+        </div>
       </div>
     );
   }

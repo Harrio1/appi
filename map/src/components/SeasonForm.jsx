@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { API_URL } from '../config/api';
 
+
 const SeasonForm = ({ onSeasonCreated, polygons, selectedFieldTypes }) => {
   const [seasonName, setSeasonName] = useState('');
   const [error, setError] = useState(null);

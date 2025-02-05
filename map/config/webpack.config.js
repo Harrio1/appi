@@ -560,6 +560,12 @@ module.exports = function (webpackEnv) {
             // Make sure to add the new loader(s) before the "file" loader.
           ],
         },
+        {
+          test: /\.js$/,
+          enforce: 'pre',
+          use: ['source-map-loader'],
+          exclude: /node_modules\/mutationobserver-shim/,
+        },
       ].filter(Boolean),
     },
     plugins: [

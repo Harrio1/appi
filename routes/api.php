@@ -40,4 +40,10 @@ Route::post('/fields/properties', [FieldController::class, 'storeProperty']);
 Route::post('/fields/by-name', [FieldController::class, 'getPolygonsByName']);
 
 Route::post('/fields', [FieldController::class, 'store']);
+Route::get('/fields', [FieldController::class, 'index']);
+
+Route::get('seasons', [SeasonController::class, 'index']);
+Route::post('/seasons', [SeasonController::class, 'store']);
+
+Route::get('seeds', [SeedController::class, 'index']);
 

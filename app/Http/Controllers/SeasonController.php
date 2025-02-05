@@ -65,4 +65,20 @@ class SeasonController extends Controller
             return response()->json(['error' => 'Ошибка при получении данных'], 500);
         }
     }
+
+    public function store(Request $request)
+    {
+        try {
+            $validatedData = $request->validate([
+                'name' => 'required|string|unique:seasons,name',
+            ]);
+
+            $season = Season::create($validatedData);
+
+            return response()->json($season, 201);
+        } catch (\Exception $e) {
+            Log::error('Ошибка при создании сезона: ' . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
 }

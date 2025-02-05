@@ -3,7 +3,7 @@ import axios from 'axios';
 import { API_URL } from '../config/api';
 
 const FieldComponent = () => {
-    const [data, setData] = useState(null);
+    const [setData] = useState(null);
 
     useEffect(() => {
         const fetchFields = async () => {
@@ -16,18 +16,7 @@ const FieldComponent = () => {
         };
         
         fetchFields();
-    }, []);
-
-    const handleSubmit = () => {
-        // Отправка данных на API
-        axios.post(`${API_URL}/fields`, { /* ваши данные */ })
-            .then(response => {
-                console.log(response.data);
-            })
-            .catch(error => {
-                console.error('There was an error sending the data!', error);
-            });
-    };
+    }, [setData]);
 
     return (
         <div>
