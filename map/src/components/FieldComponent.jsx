@@ -1,29 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { API_URL } from '../config/api';
 
 const FieldComponent = () => {
-    const [setData] = useState(null);
+    const [data, setData] = useState([]);
+
+    const fetchFields = async () => {
+        try {
+            const response = await axios.get('/api/fields');
+            setData(response.data);
+        } catch (error) {
+            console.error('Ошибка при загрузке данных:', error);
+        }
+    };
 
     useEffect(() => {
-        const fetchFields = async () => {
-            try {
-                const response = await axios.get(`${API_URL}/fields`);
-                setData(response.data);
-            } catch (error) {
-                console.error('There was an error fetching the data!', error);
-            }
-        };
-        
         fetchFields();
-    }, [setData]);
+    }, []);
 
-    return (
-        <div>
-           
-            {/* {data && <pre>{JSON.stringify(data, null, 2)}</pre>} */}
-        </div>
-    );
+    return null;
 };
 
 export default FieldComponent;

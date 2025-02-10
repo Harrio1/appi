@@ -6,20 +6,23 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
-        Schema::create('seed_colors', function (Blueprint $table) {
+        Schema::create('field_types', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('field_type_id');
-            $table->string('color');
+            $table->string('name'); // Название культуры
             $table->timestamps();
-
-            $table->foreign('field_type_id')->references('id')->on('field_types')->onDelete('cascade');
         });
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
-        Schema::dropIfExists('seed_colors');
+        Schema::dropIfExists('field_types');
     }
-}; 
+};

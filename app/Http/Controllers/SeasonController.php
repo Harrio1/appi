@@ -75,10 +75,16 @@ class SeasonController extends Controller
 
             $season = Season::create($validatedData);
 
-            return response()->json($season, 201);
+            return response()->json([
+                'success' => true,
+                'id' => $season->id,
+                'name' => $season->name,
+            ], 201);
         } catch (\Exception $e) {
-            Log::error('Ошибка при создании сезона: ' . $e->getMessage());
-            return response()->json(['error' => $e->getMessage()], 500);
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 500);
         }
     }
 }

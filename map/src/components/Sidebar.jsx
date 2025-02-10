@@ -34,7 +34,7 @@ const Sidebar = ({
   const [isSeasonModalOpen, setSeasonModalOpen] = useState(false);
   const [isFieldTypeModalOpen, setFieldTypeModalOpen] = useState(false);
   const [newFieldType, setNewFieldType] = useState('');
-  const [newFieldColor, setNewFieldColor] = useState('');
+  const [newFieldColor, setNewFieldColor] = useState('#000000');
   const [newSeasonName, setNewSeasonName] = useState('');
 
   const toggleSidebar = () => {

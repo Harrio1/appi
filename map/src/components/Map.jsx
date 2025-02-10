@@ -76,6 +76,12 @@ class MapComponent extends React.Component {
     this.loadFields();
   }
 
+  componentDidUpdate(prevProps, prevState) {
+    if (prevState.currentSeasonId !== this.state.currentSeasonId) {
+      this.loadPolygonsFromDatabase();
+    }
+  }
+
   loadSeasons = async () => {
     try {
       const response = await axios.get(`${API_URL}/seasons`);
@@ -169,7 +175,7 @@ class MapComponent extends React.Component {
     if (!this.state.currentSeasonId) return;
 
     try {
-      const response = await axios.get(`${API_URL}/api/seasons/${this.state.currentSeasonId}/fields`);
+      const response = await axios.get(`${API_URL}/seasons/${this.state.currentSeasonId}/fields`);
       const polygonsData = response.data;
       console.log('Загруженные данные полигонов:', polygonsData);
       const polygons = polygonsData.map(polygon => ({
@@ -292,12 +298,6 @@ class MapComponent extends React.Component {
     this.setState({ inputCoordinates: [] });
   };
 
-  componentDidUpdate(prevProps, prevState) {
-    if (prevState.polygons !== this.state.polygons) {
-      console.log('Оовлено состояние полигонов:', this.state.polygons);
-    }
-  }
-
   calculatePolygonCenter(coordinates) {
     const latSum = coordinates.reduce((sum, coord) => sum + coord[0], 0);
     const lngSum = coordinates.reduce((sum, coord) => sum + coord[1], 0);
@@ -362,7 +362,7 @@ class MapComponent extends React.Component {
     }
 
     try {
-      const response = await axios.put(`${API_URL}/api/fields/${editFieldId}`, {
+      const response = await axios.put(`${API_URL}/fields/${editFieldId}`, {
         name: newFieldName,
         coordinates: newFieldCoordinates,
         area: parseFloat(newFieldArea)
@@ -600,11 +600,22 @@ class MapComponent extends React.Component {
     }));
   };
 
-  addNewFieldType = (name, color) => {
-    this.setState(prevState => ({
-      fieldTypes: [...prevState.fieldTypes, name],
-      fieldColors: { ...prevState.fieldColors, [name]: color }
-    }));
+  addNewFieldType = async (name, color) => {
+    try {
+        const response = await axios.post('/api/field-types', { name, color });
+        console.log('Культура успешно создана:', response.data);
+
+        // Обновляем список культур
+        this.setState(prevState => ({
+            fieldTypes: [...prevState.fieldTypes, name],
+            fieldColors: {
+                ...prevState.fieldColors,
+                [name]: color
+            }
+        }));
+    } catch (error) {
+        console.error('Ошибка при создании культуры:', error);
+    }
   };
 
   loadPolygons = async () => {

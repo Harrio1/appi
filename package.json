@@ -2,20 +2,28 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "dev": "vite",
-        "build": "vite build"
+        "dev": "node server.mjs --host=192.168.1.113 --port=8000",
+        "build": "vite build",
+        "start": "concurrently \"npm run start:server\" \"npm run start:client\"",
+        "start:server": "cd appi && npm run dev",
+        "start:client": "cd map && npm start"
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.2",
         "@tailwindcss/typography": "^0.5.0",
         "autoprefixer": "^10.4.7",
         "axios": "^1.6.4",
+        "concurrently": "^8.2.2",
         "laravel-vite-plugin": "^1.0.0",
         "postcss": "^8.4.14",
         "tailwindcss": "^3.1.0",
         "vite": "^5.0.0"
     },
     "dependencies": {
-        "mutationobserver-shim": "^0.3.7"
+        "cors": "^2.8.5",
+        "dotenv": "^16.4.7",
+        "express": "^4.21.2",
+        "mutationobserver-shim": "^0.3.7",
+        "mysql2": "^3.12.0"
     }
 }
