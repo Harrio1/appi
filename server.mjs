@@ -66,9 +66,10 @@ app.get('/api/seasons/:season/fields', async (req, res) => {
 
         // Получаем поля и их свойства для указанного сезона
         const [fields] = await db.query(
-            `SELECT f.id, f.name, f.coordinates, f.area, p.field_type, p.seed_color
+            `SELECT f.id, f.name, f.coordinates, f.area, s.name as seed_name, p.seed_color
              FROM fields f
              JOIN properties p ON f.id = p.field_id
+             JOIN seeds s ON p.seed_id = s.id
              WHERE p.season_id = ?`,
             [seasonId]
         );
@@ -124,10 +125,10 @@ app.post('/api/seasons', async (req, res) => {
 
 app.post('/api/fields/properties', async (req, res) => {
     try {
-        const { field_id, season_name, field_type, seed_color } = req.body;
+        const { field_id, season_name, seed_id, seed_color } = req.body;
 
         // Проверка наличия обязательных данных
-        if (!field_id || !season_name || !field_type || !seed_color) {
+        if (!field_id || !season_name || !seed_id || !seed_color) {
             return res.status(400).json({ error: 'Отсутствуют обязательные данные' });
         }
 
@@ -140,8 +141,8 @@ app.post('/api/fields/properties', async (req, res) => {
 
         // Сохранение свойств поля в базу данных
         const [result] = await db.query(
-            'INSERT INTO properties (field_id, season_id, field_type, seed_color) VALUES (?, ?, ?, ?)',
-            [field_id, season_id, field_type, seed_color]
+            'INSERT INTO properties (field_id, season_id, seed_id, seed_color) VALUES (?, ?, ?, ?)',
+            [field_id, season_id, seed_id, seed_color]
         );
 
         console.log('Свойства поля успешно сохранены:', result);
@@ -149,21 +150,6 @@ app.post('/api/fields/properties', async (req, res) => {
     } catch (error) {
         console.error('Ошибка при сохранении свойств поля:', error);
         res.status(500).json({ error: 'Ошибка при сохранении данных' });
-    }
-});
-
-// GET /api/field-types
-app.get('/api/field-types', async (req, res) => {
-    try {
-        const [fieldTypes] = await db.query(`
-            SELECT ft.id, ft.name, sc.color
-            FROM field_types ft
-            LEFT JOIN seed_colors sc ON ft.id = sc.seed_id
-        `);
-        res.json(fieldTypes);
-    } catch (error) {
-        console.error('Ошибка при получении культур:', error);
-        res.status(500).json({ error: 'Ошибка при получении данных' });
     }
 });
 
@@ -194,67 +180,6 @@ app.post('/api/seeds', async (req, res) => {
     } catch (error) {
         console.error('Ошибка при создании культуры:', error);
         res.status(500).json({ error: 'Ошибка при создании данных' });
-    }
-});
-
-// POST /api/field-types
-app.post('/api/field-types', async (req, res) => {
-    try {
-        const { name, color } = req.body;
-
-        // Проверка наличия обязательных данных
-        if (!name || !color) {
-            return res.status(400).json({ error: 'Отсутствуют обязательные данные' });
-        }
-
-        // Начинаем транзакцию
-        const connection = await db.getConnection();
-        await connection.beginTransaction();
-
-        try {
-            // Сохранение новой культуры в таблицу field_types
-            const [fieldTypeResult] = await connection.query(
-                'INSERT INTO field_types (name) VALUES (?)',
-                [name]
-            );
-
-            // Использование id новой записи из field_types для вставки в seed_colors
-            const [colorResult] = await connection.query(
-                'INSERT INTO seed_colors (field_type_id, color) VALUES (?, ?)',
-                [fieldTypeResult.insertId, color]
-            );
-
-            // Подтверждаем транзакцию
-            await connection.commit();
-            connection.release();
-
-            console.log('Культура успешно создана:', fieldTypeResult, colorResult);
-            res.status(201).json({ 
-                success: true, 
-                id: fieldTypeResult.insertId, 
-                name, 
-                color 
-            });
-        } catch (error) {
-            // Откатываем транзакцию в случае ошибки
-            await connection.rollback();
-            connection.release();
-            throw error;
-        }
-    } catch (error) {
-        console.error('Ошибка при создании культуры:', {
-            message: error.message,
-            stack: error.stack,
-            sql: error.sql,
-            sqlMessage: error.sqlMessage
-        });
-        res.status(500).json({ 
-            error: 'Ошибка при создании данных',
-            details: {
-                message: error.message,
-                sqlMessage: error.sqlMessage
-            }
-        });
     }
 });
 

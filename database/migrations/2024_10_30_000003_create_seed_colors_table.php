@@ -10,11 +10,11 @@ return new class extends Migration
     {
         Schema::create('seed_colors', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('field_type_id');
+            $table->unsignedBigInteger('seed_id');
             $table->string('color');
             $table->timestamps();
 
-            $table->foreign('field_type_id')->references('id')->on('field_types')->onDelete('cascade');
+            $table->foreign('seed_id')->references('id')->on('seeds')->onDelete('cascade');
         });
     }
 
