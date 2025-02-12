@@ -12,12 +12,13 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('field_id');
             $table->unsignedBigInteger('season_id');
-            $table->string('field_type');
+            $table->unsignedBigInteger('seed_id');
             $table->string('seed_color');
             $table->timestamps();
 
             $table->foreign('field_id')->references('id')->on('fields')->onDelete('cascade');
             $table->foreign('season_id')->references('id')->on('seasons')->onDelete('cascade');
+            $table->foreign('seed_id')->references('id')->on('seeds')->onDelete('cascade');
         });
     }
 

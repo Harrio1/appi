@@ -45,7 +45,7 @@ if (!checkRequiredFiles([paths.appHtml, paths.appIndexJs])) {
 
 // Tools like Cloud9 rely on this.
 const DEFAULT_PORT = parseInt(process.env.PORT, 10) || 3003;
-const HOST = process.env.HOST || '192.168.1.113';
+const HOST = process.env.HOST || 'localhost';
 
 if (process.env.HOST) {
   console.log(

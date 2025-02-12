@@ -2,11 +2,11 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "dev": "node server.mjs --host=192.168.1.113 --port=8000",
+        "dev": "node server.mjs --host=localhost --port=8000",
         "build": "vite build",
-        "start": "concurrently \"npm run start:server\" \"npm run start:client\"",
-        "start:server": "cd appi && npm run dev",
-        "start:client": "cd map && npm start"
+        "start": "concurrently \"npm run start-server\" \"npm run start-client\"",
+        "start-server": "node server.mjs",
+        "start-client": "cd map && npm start"
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.2",

@@ -78,7 +78,8 @@ class MapComponent extends React.Component {
 
   componentDidUpdate(prevProps, prevState) {
     if (prevState.currentSeasonId !== this.state.currentSeasonId) {
-      this.loadPolygonsFromDatabase();
+        console.log('Сезон изменен. Текущий сезон ID:', this.state.currentSeasonId);
+        console.log('Текущие полигоны:', this.state.polygons);
     }
   }
 
@@ -101,7 +102,7 @@ class MapComponent extends React.Component {
         }))
       });
 
-      const response = await axios.post(`${API_URL}/api/seasons`, {
+      const response = await axios.post(`${API_URL}/seasons`, {
         name: this.state.newSeasonName,
         seeds: this.state.polygons.map(polygon => ({
           id: polygon.id,
@@ -130,44 +131,55 @@ class MapComponent extends React.Component {
     console.log('Выбранный сезон ID:', seasonId);
 
     if (seasonId === '') {
-      try {
-        const response = await axios.get(`${API_URL}/fields`);
-        const fieldsData = response.data;
+        try {
+            const response = await axios.get(`${API_URL}/fields`);
+            const fieldsData = response.data;
 
-        const allPolygons = fieldsData.map(field => ({
-          id: field.id,
-          coordinates: field.coordinates,
-          field_type: field.field_type,
-          color: field.color || this.state.fieldColors[field.field_type] || 'red',
-          name: field.name,
-          area: field.area
-        }));
+            if (!fieldsData || !Array.isArray(fieldsData)) {
+                throw new Error('Некорректные данные полей');
+            }
 
-        this.setState({ currentSeasonId: null, polygons: allPolygons });
-      } catch (error) {
-        console.error('Ошибка при загрузке всех полей:', error);
-        alert('Ошибка при загрузке данных: ' + error.message);
-      }
-      return;
+            const allPolygons = fieldsData.map(field => ({
+                id: field.id,
+                coordinates: field.coordinates,
+                field_type: field.field_type || 'Неизвестно',
+                color: field.color || this.state.fieldColors[field.field_type] || 'red',
+                name: field.name || 'Без названия',
+                area: field.area || 0
+            }));
+
+            console.log('Обновленные полигоны (все поля):', allPolygons);
+            this.setState({ currentSeasonId: null, polygons: allPolygons });
+        } catch (error) {
+            console.error('Ошибка при загрузке всех полей:', error);
+            alert('Ошибка при загрузке данных: ' + error.message);
+        }
+        return;
     }
 
     try {
-      const response = await axios.get(`${API_URL}/seasons/${seasonId}/fields`);
-      const fieldsData = response.data;
+        const response = await axios.get(`${API_URL}/seasons/${seasonId}/fields`);
+        const fieldsData = response.data;
+        console.log('Данные полей для сезона:', fieldsData);
 
-      const updatedPolygons = fieldsData.map(field => ({
-        id: field.id,
-        coordinates: field.coordinates,
-        field_type: field.field_type,
-        color: field.color || this.state.fieldColors[field.field_type] || 'red',
-        name: field.name,
-        area: field.area
-      }));
+        if (!fieldsData || !Array.isArray(fieldsData)) {
+            throw new Error('Некорректные данные полей для сезона');
+        }
 
-      this.setState({ currentSeasonId: seasonId, polygons: updatedPolygons });
+        const updatedPolygons = fieldsData.map(field => ({
+            id: field.id,
+            coordinates: field.coordinates,
+            field_type: field.seed_name || 'Неизвестно',
+            color: field.seed_color || this.state.fieldColors[field.seed_name] || 'red',
+            name: field.name || 'Без названия',
+            area: field.area || 0
+        }));
+
+        console.log('Обновленные полигоны (сезон):', updatedPolygons);
+        this.setState({ currentSeasonId: seasonId, polygons: updatedPolygons });
     } catch (error) {
-      console.error('Ошибка при загрузке данных полей:', error);
-      alert('Ошибка при загрузке данных: ' + error.message);
+        console.error('Ошибка при загрузке данных полей:', error);
+        alert('Ошибка при загрузке данных: ' + error.message);
     }
   };
 
@@ -707,8 +719,8 @@ class MapComponent extends React.Component {
           {polylineCoordinates.length > 1 && (
             <Polyline positions={polylineCoordinates} color="blue" />
           )}
-          {this.state.showPolygons && this.state.polygons.map(polygon => {
-            const fillColor = polygon.color;
+          {this.state.showPolygons && this.state.polygons.length > 0 && this.state.polygons.map(polygon => {
+            const fillColor = polygon.color || 'red';
             const fieldType = polygon.field_type || 'Неизвестно';
 
             return (

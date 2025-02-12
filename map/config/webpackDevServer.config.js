@@ -18,7 +18,7 @@ const sockPort = process.env.WDS_SOCKET_PORT;
 const app = express();
 
 app.use(cors({
-  origin: 'http://192.168.1.113'
+  origin: 'http://localhost'
 }));
 
 module.exports = function (proxy, allowedHost) {
