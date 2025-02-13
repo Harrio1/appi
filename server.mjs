@@ -16,6 +16,13 @@ app.use(cors({
 }));
 app.use(express.json());
 
+app.use((req, res, next) => {
+    res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.header('Pragma', 'no-cache');
+    res.header('Expires', '0');
+    next();
+});
+
 // Получаем аргументы командной строки
 const args = process.argv.slice(2);
 const host = args.includes('--host') ? args[args.indexOf('--host') + 1] : 'localhost';
@@ -120,10 +127,12 @@ app.post('/api/fields', async (req, res) => {
             [name, JSON.stringify(coordinates), area, season_id]
         );
 
-        console.log('Полигон успешно добавлен в базу данных:', result);
-
         // Получаем данные о добавленном поле
         const [newField] = await db.query('SELECT * FROM fields WHERE id = ?', [result.insertId]);
+
+        if (!newField || newField.length === 0) {
+            return res.status(500).json({ error: 'Не удалось получить данные о новом поле' });
+        }
 
         // Возвращаем успешный ответ с данными о новом поле
         res.status(201).json({ success: true, field: newField[0] });
@@ -176,48 +185,48 @@ app.post('/api/fields/properties', async (req, res) => {
 
 // POST /api/seeds
 app.post('/api/seeds', async (req, res) => {
-  try {
-    const { name } = req.body;
+    try {
+        const { name } = req.body;
 
-    // Проверка наличия обязательных данных
-    if (!name) {
-      return res.status(400).json({ error: 'Отсутствует название культуры' });
+        // Проверка наличия обязательных данных
+        if (!name) {
+            return res.status(400).json({ error: 'Отсутствует название культуры' });
+        }
+
+        // Сохранение культуры в таблицу seeds
+        const [seedResult] = await db.query(
+            'INSERT INTO seeds (name) VALUES (?)',
+            [name]
+        );
+
+        res.status(201).json({ success: true, id: seedResult.insertId, name });
+    } catch (error) {
+        console.error('Ошибка при создании культуры:', error);
+        res.status(500).json({ error: 'Ошибка при создании данных' });
     }
-
-    // Сохранение культуры в таблицу seeds
-    const [seedResult] = await db.query(
-      'INSERT INTO seeds (name) VALUES (?)',
-      [name]
-    );
-
-    res.status(201).json({ success: true, id: seedResult.insertId, name });
-  } catch (error) {
-    console.error('Ошибка при создании культуры:', error);
-    res.status(500).json({ error: 'Ошибка при создании данных' });
-  }
 });
 
 // POST /api/seed-colors
 app.post('/api/seed-colors', async (req, res) => {
-  try {
-    const { seed_id, color } = req.body;
+    try {
+        const { seed_id, color } = req.body;
 
-    // Проверка наличия обязательных данных
-    if (!seed_id || !color) {
-      return res.status(400).json({ error: 'Отсутствуют обязательные данные' });
+        // Проверка наличия обязательных данных
+        if (!seed_id || !color) {
+            return res.status(400).json({ error: 'Отсутствуют обязательные данные' });
+        }
+
+        // Сохранение цвета культуры в таблицу seed_colors
+        const [colorResult] = await db.query(
+            'INSERT INTO seed_colors (seed_id, color) VALUES (?, ?)',
+            [seed_id, color]
+        );
+
+        res.status(201).json({ success: true, id: colorResult.insertId });
+    } catch (error) {
+        console.error('Ошибка при сохранении цвета культуры:', error);
+        res.status(500).json({ error: 'Ошибка при сохранении данных' });
     }
-
-    // Сохранение цвета культуры в таблицу seed_colors
-    const [colorResult] = await db.query(
-      'INSERT INTO seed_colors (seed_id, color) VALUES (?, ?)',
-      [seed_id, color]
-    );
-
-    res.status(201).json({ success: true, id: colorResult.insertId });
-  } catch (error) {
-    console.error('Ошибка при сохранении цвета культуры:', error);
-    res.status(500).json({ error: 'Ошибка при сохранении данных' });
-  }
 });
 
 app.get('/api/fields/properties', async (req, res) => {

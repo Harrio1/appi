@@ -238,22 +238,23 @@ class MapComponent extends React.Component {
         }
 
         const area = this.calculateArea(coordinates);
+        const roundedArea = Math.round(area); // Округляем площадь
 
         try {
             const response = await axios.post(`${API_URL}/fields`, {
                 coordinates: coordinates,
                 name: newPolygonName,
-                area: area,
+                area: roundedArea,
                 season_id: currentSeasonId
             });
 
             if (response.data && response.data.success) {
                 const addedPolygon = {
-                    id: response.data.id,
+                    id: response.data.field.id,
                     coordinates: coordinates,
                     color: 'red',
-                    name: response.data.name,
-                    area: area
+                    name: response.data.field.name, // Используем название из ответа сервера
+                    area: response.data.field.area // Используем площадь из ответа сервера
                 };
 
                 this.setState(prevState => ({
@@ -474,10 +475,18 @@ class MapComponent extends React.Component {
     }
 
     try {
+        // Получаем seed_id по названию культуры
+        const seedResponse = await axios.get(`${API_URL}/seeds?name=${selectedFieldType}`);
+        if (!seedResponse.data || seedResponse.data.length === 0) {
+            throw new Error('Культура не найдена');
+        }
+        const seedId = seedResponse.data[0].id;
+
+        // Сохраняем свойства поля
         await axios.post(`${API_URL}/fields/properties`, {
             field_id: selectedFieldId,
             season_name: selectedSeason,
-            field_type: selectedFieldType,
+            seed_id: seedId,
             seed_color: selectedFieldColor
         });
 
@@ -614,8 +623,14 @@ class MapComponent extends React.Component {
 
   addNewFieldType = async (name, color) => {
     try {
-        const response = await axios.post('/api/field-types', { name, color });
-        console.log('Культура успешно создана:', response.data);
+        // Создаем семя
+        const seedResponse = await axios.post(`${API_URL}/seeds`, { name });
+        const seedId = seedResponse.data.id;
+
+        // Создаем цвет для семени
+        await axios.post(`${API_URL}/seed-colors`, { seed_id: seedId, color });
+
+        console.log('Культура и цвет успешно созданы:', { name, color });
 
         // Обновляем список культур
         this.setState(prevState => ({
@@ -627,6 +642,7 @@ class MapComponent extends React.Component {
         }));
     } catch (error) {
         console.error('Ошибка при создании культуры:', error);
+        alert('Ошибка при создании культуры: ' + error.message);
     }
   };
 
@@ -656,6 +672,8 @@ class MapComponent extends React.Component {
     if (polylineCoordinates.length > 1 && (polylineCoordinates[0][0] !== polylineCoordinates[polylineCoordinates.length - 1][0] || polylineCoordinates[0][1] !== polylineCoordinates[polylineCoordinates.length - 1][1])) {
       polylineCoordinates.push(polylineCoordinates[0]);
     }
+
+    const { fieldTypes, fieldColors } = this.state;
 
     return (
       <div className="map-container">
@@ -762,6 +780,13 @@ class MapComponent extends React.Component {
             <button onClick={() => this.setState({ basemap: 'mapbox' })}>MAPBOX</button>
           </div>
         </div>
+        <select onChange={this.handleFieldTypeSelection}>
+          {fieldTypes.map((type, index) => (
+            <option key={index} value={type}>
+              {type} ({fieldColors[type] || 'red'})
+            </option>
+          ))}
+        </select>
       </div>
     );
   }
