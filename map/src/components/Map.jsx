@@ -70,10 +70,9 @@ class MapComponent extends React.Component {
   colors = ['red'];
 
   componentDidMount() {
-    this.loadAllPolygons();
-    this.loadSeasons();
     this.loadSeeds();
-    this.loadFields();
+    this.loadPolygons();
+    this.loadSeasons();
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -341,11 +340,19 @@ class MapComponent extends React.Component {
 
   loadSeeds = async () => {
     try {
-      const response = await axios.get(`${API_URL}/seeds`);
-      const seeds = response.data;
-      this.setState({ seeds });
+        const response = await axios.get(`${API_URL}/seeds`);
+        const seeds = response.data;
+
+        // Создаем объект fieldTypes и fieldColors
+        const fieldTypes = seeds.map(seed => seed.name);
+        const fieldColors = seeds.reduce((acc, seed) => {
+            acc[seed.name] = seed.color || 'red';
+            return acc;
+        }, {});
+
+        this.setState({ seeds, fieldTypes, fieldColors });
     } catch (error) {
-      console.error('Ошибка при загрузке семян:', error);
+        console.error('Ошибка при загрузке семян:', error);
     }
   };
 
