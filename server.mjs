@@ -9,7 +9,7 @@ const app = express();
 
 // Разрешаем запросы с любого источника (или укажите конкретный домен)
 app.use(cors({
-  origin: 'http://localhost:3003', // Укажите порт вашего React-приложения
+  origin: '*', // Разрешаем запросы с любого источника
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -27,6 +27,9 @@ app.use((req, res, next) => {
 const args = process.argv.slice(2);
 const host = args.includes('--host') ? args[args.indexOf('--host') + 1] : 'localhost';
 const port = args.includes('--port') ? parseInt(args[args.indexOf('--port') + 1]) : 8000;
+
+// Логируем параметры запуска
+console.log(`Starting server with host=${host}, port=${port}`);
 
 // Указываем данные для подключения к базе данных напрямую
 const db = mysql.createPool({

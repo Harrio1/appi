@@ -1,0 +1,619 @@
+.mobile-map-container {
+  width: 100%;
+  height: 100vh;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-map-container.fullscreen-mode .mobile-map {
+  height: 100vh;
+}
+
+.mobile-map {
+  width: 100%;
+  height: calc(100vh - 140px);
+  flex-grow: 1;
+  z-index: 0;
+}
+
+.mobile-controls {
+  width: 100%;
+  padding: 10px;
+  background-color: #f8f9fa;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.mobile-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+  background-color: white;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg fill='gray' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 30px;
+}
+
+.mobile-select.disabled,
+.mobile-select:disabled {
+  background-color: #f2f2f2;
+  color: #999;
+  border-color: #ddd;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Стили для отображения цветов культур */
+.select-with-colors {
+  position: relative;
+  width: 100%;
+}
+
+.selected-crop-color {
+  position: absolute;
+  right: 40px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid #ddd;
+}
+
+.crop-option {
+  padding-right: 24px;
+  position: relative;
+}
+
+/* Специальные стили для стилизации опций с цветами */
+option.crop-option {
+  text-indent: 5px;
+  border-left: 8px solid;
+}
+
+/* Стили для нативного выпадающего списка */
+.mobile-season-selector select,
+.mobile-crop-type-selector select {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* Фиксим выпадающие списки для iOS */
+@supports (-webkit-overflow-scrolling: touch) {
+  .mobile-select {
+    /* Исправляем проблему с выпадающими списками на iOS */
+    text-overflow: ellipsis;
+  }
+  
+  /* Кастомный выпадающий список для iOS */
+  .ios-select-container {
+    position: relative;
+    width: 100%;
+  }
+  
+  .ios-select-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1001;
+    display: none;
+  }
+  
+  .ios-select-popup {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: white;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    max-height: 50vh;
+    overflow-y: auto;
+    z-index: 1002;
+    padding: 16px;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+  }
+  
+  .ios-select-popup.active {
+    transform: translateY(0);
+  }
+  
+  .ios-select-option {
+    padding: 12px 8px;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .ios-select-option:last-child {
+    border-bottom: none;
+  }
+  
+  .ios-select-option.selected {
+    background-color: #f0f7ff;
+    color: #007bff;
+    font-weight: bold;
+  }
+}
+
+/* Стили для Android/Chrome */
+@supports not (-webkit-overflow-scrolling: touch) {
+  select.mobile-select {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  select.mobile-select option {
+    white-space: normal;
+    font-size: 14px;
+  }
+}
+
+/* Новые стили для кнопки переключения интерфейса */
+.interface-toggle-container {
+  position: absolute;
+  bottom: 60px;
+  right: 10px;
+  z-index: 1000;
+}
+
+.interface-toggle-button {
+  display: flex;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.9);
+  border: none;
+  border-radius: 40px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.interface-toggle-button:hover {
+  background-color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.interface-toggle-button.hide-interface {
+  background-color: #007bff;
+}
+
+.interface-toggle-button.hide-interface .toggle-text {
+  color: white;
+}
+
+.interface-toggle-button.hide-interface .toggle-line {
+  background-color: white;
+}
+
+.interface-toggle-button.show-interface {
+  background-color: #28a745;
+}
+
+.interface-toggle-button.show-interface .toggle-text {
+  color: white;
+}
+
+.interface-toggle-button.show-interface .toggle-line {
+  background-color: white;
+}
+
+.toggle-icon {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+}
+
+.toggle-line {
+  width: 16px;
+  height: 2px;
+  background-color: #333;
+  margin: 2px 0;
+  transition: all 0.3s ease;
+}
+
+.hide-interface .toggle-line:nth-child(1) {
+  transform: rotate(45deg) translate(4px, 4px);
+}
+
+.hide-interface .toggle-line:nth-child(2) {
+  opacity: 0;
+}
+
+.hide-interface .toggle-line:nth-child(3) {
+  transform: rotate(-45deg) translate(4px, -4px);
+}
+
+.show-interface .toggle-line:nth-child(1) {
+  transform: rotate(0) translate(0, 0);
+}
+
+.show-interface .toggle-line:nth-child(2) {
+  opacity: 1;
+}
+
+.show-interface .toggle-line:nth-child(3) {
+  transform: rotate(0) translate(0, 0);
+}
+
+.toggle-text {
+  font-size: 14px;
+  font-weight: bold;
+  color: #333;
+  white-space: nowrap;
+}
+
+.toggle-interface-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: white;
+  border: 2px solid #007bff;
+  color: #007bff;
+  font-size: 24px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1000;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transform: rotate(0deg);
+  transition: transform 0.3s ease;
+}
+
+.toggle-interface-button:hover {
+  background-color: #f0f8ff;
+  transform: scale(1.1);
+}
+
+.fullscreen-mode .toggle-interface-button {
+  opacity: 0.7;
+}
+
+.fullscreen-mode .toggle-interface-button:hover {
+  opacity: 1;
+}
+
+.mobile-crop-button {
+  padding: 8px 12px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.mobile-crop-button.disabled {
+  background-color: #cccccc;
+  color: #666666;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.mobile-crop-list {
+  max-height: 200px;
+  overflow-y: auto;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-top: 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-crop-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.mobile-crop-item:last-child {
+  border-bottom: none;
+}
+
+.mobile-crop-item input[type="checkbox"] {
+  margin-right: 10px;
+}
+
+.mobile-crop-item input[type="checkbox"]:disabled + label {
+  color: #999;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.mobile-crop-item label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  font-size: 14px;
+}
+
+.mobile-crop-color {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  margin-left: 10px;
+}
+
+.mobile-basemap-selector {
+  display: flex;
+  justify-content: space-around;
+  padding: 10px;
+  background-color: #f8f9fa;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-basemap-selector button {
+  padding: 8px 12px;
+  border: none;
+  background-color: #e9ecef;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #495057;
+}
+
+.mobile-basemap-selector button.active {
+  background-color: #007bff;
+  color: white;
+}
+
+.mobile-polygon-tooltip {
+  background-color: rgba(255, 255, 255, 0.8);
+  border: none;
+  border-radius: 3px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: bold;
+  color: #333;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.mobile-polygon-popup .leaflet-popup-content {
+  margin: 8px;
+}
+
+.mobile-polygon-popup .leaflet-popup-content p {
+  margin: 5px 0;
+  font-size: 14px;
+}
+
+/* Стили для индикатора загрузки */
+.mobile-loading {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: calc(100vh - 140px);
+  background-color: #f8f9fa;
+}
+
+.fullscreen-mode .mobile-loading {
+  height: 100vh;
+}
+
+.mobile-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(0, 123, 255, 0.2);
+  border-radius: 50%;
+  border-top-color: #007bff;
+  animation: spin 1s ease-in-out infinite;
+  margin-bottom: 10px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.mobile-loading p {
+  font-size: 16px;
+  color: #495057;
+  margin: 0;
+}
+
+@media (max-width: 480px) {
+  .mobile-map {
+    height: calc(100vh - 120px);
+  }
+  
+  .mobile-loading {
+    height: calc(100vh - 120px);
+  }
+  
+  .mobile-map-container.fullscreen-mode .mobile-map,
+  .fullscreen-mode .mobile-loading {
+    height: 100vh;
+  }
+  
+  .interface-toggle-button {
+    padding: 6px 10px;
+  }
+  
+  .toggle-text {
+    font-size: 12px;
+  }
+  
+  .toggle-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 6px;
+  }
+  
+  .toggle-line {
+    width: 14px;
+  }
+  
+  .mobile-crop-list {
+    max-height: 150px;
+  }
+  
+  .mobile-crop-item {
+    padding: 6px 10px;
+  }
+  
+  .mobile-crop-item label {
+    font-size: 12px;
+  }
+  
+  .mobile-crop-button {
+    padding: 6px 10px;
+    font-size: 14px;
+  }
+  
+  .mobile-basemap-selector button {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+  
+  .mobile-search-input,
+  .mobile-select {
+    padding: 6px 10px;
+    font-size: 14px;
+  }
+  
+  .mobile-polygon-tooltip {
+    font-size: 10px;
+    padding: 2px 4px;
+  }
+}
+
+/* Стили для подсказки установки приложения */
+.install-prompt {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 2000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.install-prompt-content {
+  background-color: white;
+  border-radius: 12px;
+  padding: 20px;
+  width: 85%;
+  max-width: 350px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.install-prompt h3 {
+  color: #007bff;
+  margin-top: 0;
+  font-size: 18px;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.ios-instructions, .android-instructions {
+  margin-bottom: 20px;
+}
+
+.ios-instructions p, .android-instructions p {
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.ios-instructions ol, .android-instructions ol {
+  padding-left: 20px;
+}
+
+.ios-instructions li, .android-instructions li {
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.share-icon {
+  display: inline-block;
+  transform: rotate(90deg);
+  font-size: 20px;
+  margin: 0 5px;
+}
+
+.install-prompt-close {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 15px;
+}
+
+.install-prompt-close:active {
+  background-color: #0056b3;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Медиа запросы для маленьких устройств */
+@media (max-width: 320px) {
+  .install-prompt-content {
+    padding: 15px;
+  }
+  
+  .install-prompt h3 {
+    font-size: 16px;
+  }
+  
+  .ios-instructions li, .android-instructions li,
+  .ios-instructions p, .android-instructions p {
+    font-size: 13px;
+  }
+  
+  .install-prompt-close {
+    padding: 8px;
+    font-size: 14px;
+  }
+}

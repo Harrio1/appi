@@ -8,14 +8,14 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('seed_colors', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('seed_id');
-            $table->string('color');
-            $table->timestamps();
-
-            $table->foreign('seed_id')->references('id')->on('seeds')->onDelete('cascade');
-        });
+        if (!Schema::hasTable('seed_colors')) {
+            Schema::create('seed_colors', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('seed_id')->constrained()->onDelete('cascade');
+                $table->string('color');
+                $table->timestamps();
+            });
+        }
     }
 
     public function down(): void

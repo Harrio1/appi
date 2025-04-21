@@ -5,8 +5,8 @@
         "dev": "node server.mjs --host=localhost --port=8000",
         "build": "vite build",
         "start": "concurrently \"npm run start-server\" \"npm run start-client\"",
-        "start-server": "node server.mjs",
-        "start-client": "cd map && npm start"
+        "start-server": "node server.mjs --host=localhost --port=8000",
+        "start-client": "cd map && npm run dev"
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.2",
@@ -14,6 +14,7 @@
         "autoprefixer": "^10.4.7",
         "axios": "^1.6.4",
         "concurrently": "^8.2.2",
+        "cross-env": "^7.0.3",
         "laravel-vite-plugin": "^1.0.0",
         "postcss": "^8.4.14",
         "tailwindcss": "^3.1.0",
@@ -24,6 +25,7 @@
         "dotenv": "^16.4.7",
         "express": "^4.21.2",
         "mutationobserver-shim": "^0.3.7",
-        "mysql2": "^3.12.0"
+        "mysql2": "^3.12.0",
+        "react-toastify": "^11.0.5"
     }
 }

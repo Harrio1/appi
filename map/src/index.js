@@ -6,6 +6,8 @@ import store from './store';
 import App from './App';
 import * as serviceWorker from './serviceWorker';
 import ErrorBoundary from './components/ErrorBoundary';
+// Импортируем отладочный модуль для проверки соединения с API
+import './utils/networkDebug';
 
 ReactDOM.render(
     <Provider store={store}>
@@ -15,7 +17,6 @@ ReactDOM.render(
     </Provider>, 
   document.getElementById('root'));
 
-// If you want your app to work offline and load faster, you can change
-// unregister() to register() below. Note this comes with some pitfalls.
-// Learn more about service workers: https://bit.ly/CRA-PWA
+// Временно отключаем Service Worker, чтобы исправить проблемы с кешированием
+// Включите его позже, когда приложение будет стабильно работать
 serviceWorker.unregister();

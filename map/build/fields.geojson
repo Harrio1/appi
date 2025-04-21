@@ -1,0 +1,22 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Поле 1"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [41.031736, 46.536032],
+            [41.032736, 46.536032],
+            [41.032736, 46.537032],
+            [41.031736, 46.537032]
+          ]
+        ]
+      }
+    }
+  ]
+}

@@ -8,11 +8,13 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('seeds', function (Blueprint $table) {
-            $table->id();
-            $table->string('name'); // Название семени
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('seeds')) {
+            Schema::create('seeds', function (Blueprint $table) {
+                $table->id();
+                $table->string('name'); // Название семени
+                $table->timestamps();
+            });
+        }
     }
 
     public function down(): void

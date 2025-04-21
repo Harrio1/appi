@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Component } from "react";
 import L from 'leaflet';
 import { Map, TileLayer, Marker, Popup, ZoomControl, Polygon, Polyline, Tooltip } from "react-leaflet";
 import '../css/Map.css';
@@ -6,73 +6,82 @@ import { connect } from "react-redux";
 import axios from 'axios';
 import * as turf from '@turf/turf'; // Импортируем turf
 import Sidebar from './Sidebar'; // Импортируем новый компонент
-import { API_URL } from '../config/api';
+import API_URL, { fetchData } from '../utils/apiConfig';
 // указываем путь к файлам marker
 L.Icon.Default.imagePath = "https://unpkg.com/leaflet@1.5.0/dist/images/";
 
-class MapComponent extends React.Component {
-  state = {
-    lat: 46.536032,
-    lng: 41.031736,
-    zoom: 10,
-    basemap: 'mapbox',
-    polygons: [],
-    inputCoordinates: [],
-    creationMode: false,
-    selectedPolygonId: null,
-    fieldTypes: ['Пшеница', 'Кукуруза', 'Соя', 'Подсолнечник', 'Рапс', 'Ячмень', 'Овес', 'Рис', 'Гречиха'],
-    seedNames: {
-      'Пшеница': 'Семена Пшеницы',
-      'Кукуруза': 'Семена Кукурузы',
-      'Соя': 'Семена Сои',
-      'Подсолнечник': 'Семена Подсолнечника',
-      'Рапс': 'Семена Рапса',
-      'Ячмень': 'Семена Ячменя',
-      'Овес': 'Семена Овса',
-      'Рис': 'Семена Риса',
-      'Гречиха': 'Семена Гречихи'
-    },
-    fieldColors: {
-      'Пшеница': 'gold',
-      'Кукуруза': 'yellow',
-      'Соя': 'green',
-      'Подсолнечник': 'orange',
-      'Рапс': 'lightgreen',
-      'Ячмень': 'beige',
-      'Овес': 'lightyellow',
-      'Рис': 'lightblue',
-      'Гречиха': 'brown'
-    },
-    selectedFieldTypes: {},
-    seasons: [],
-    currentSeasonId: null,
-    newSeasonName: '',
-    filterText: '',
-    seeds: [],
-    fields: [],
-    selectedFieldId: null,
-    selectedSeason: '',
-    selectedFieldType: '',
-    newPolygonName: '',
-    searchPolygonName: '',
-    showPolygons: true,
-    showPolygonForm: true,
-    showFieldManagementForm: true,
-    isSidebarVisible: true,
-    basemapsDict: {
-      osm: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-      hot: "https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
-      dark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
-      mapbox: "https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}.png"
-    },
-  };
+class MapComponent extends Component {
+  _isMounted = false;
 
-  colors = ['red'];
+  constructor(props) {
+    super(props);
+    this.state = {
+      lat: 46.536032,
+      lng: 41.031736,
+      zoom: 10,
+      basemap: 'mapbox',
+      polygons: [],
+      inputCoordinates: [],
+      creationMode: false,
+      selectedPolygonId: null,
+      fieldTypes: ['Пшеница', 'Кукуруза', 'Соя', 'Подсолнечник', 'Рапс', 'Ячмень', 'Овес', 'Рис', 'Гречиха'],
+      seedNames: {
+        'Пшеница': 'Семена Пшеницы',
+        'Кукуруза': 'Семена Кукурузы',
+        'Соя': 'Семена Сои',
+        'Подсолнечник': 'Семена Подсолнечника',
+        'Рапс': 'Семена Рапса',
+        'Ячмень': 'Семена Ячменя',
+        'Овес': 'Семена Овса',
+        'Рис': 'Семена Риса',
+        'Гречиха': 'Семена Гречихи'
+      },
+      fieldColors: {
+        'Пшеница': 'gold',
+        'Кукуруза': 'yellow',
+        'Соя': 'green',
+        'Подсолнечник': 'orange',
+        'Рапс': 'lightgreen',
+        'Ячмень': 'beige',
+        'Овес': 'lightyellow',
+        'Рис': 'lightblue',
+        'Гречиха': 'brown'
+      },
+      selectedFieldTypes: {},
+      seasons: [],
+      currentSeasonId: null,
+      newSeasonName: '',
+      filterText: '',
+      seeds: [],
+      fields: [],
+      selectedFieldId: null,
+      selectedSeason: '',
+      selectedFieldType: '',
+      newPolygonName: '',
+      searchPolygonName: '',
+      showPolygons: true,
+      showPolygonForm: true,
+      showFieldManagementForm: true,
+      isSidebarVisible: true,
+      basemapsDict: {
+        osm: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        hot: "https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
+        dark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
+        mapbox: "https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}.png"
+      },
+      selectedCrop: '',
+      showCropSelector: false,
+      selectedCrops: [],
+      filteredPolygons: [],
+    };
+  }
 
   componentDidMount() {
+    this._isMounted = true;
     this.loadSeeds();
     this.loadPolygons();
     this.loadSeasons();
+    this.loadFields();
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -82,12 +91,29 @@ class MapComponent extends React.Component {
     }
   }
 
+  componentWillUnmount() {
+    this._isMounted = false;
+  }
+
+  safeSetState(data, callback) {
+    if (this._isMounted) {
+      this.setState(data, callback);
+    }
+  }
+
   loadSeasons = async () => {
     try {
-      const response = await axios.get(`${API_URL}/seasons`);
-      this.setState({ seasons: response.data });
+      console.log('Загружаем сезоны с:', API_URL);
+      const response = await fetchData('seasons');
+      // Ensure seasons is always an array
+      const seasonsData = Array.isArray(response.data) ? response.data : [];
+      console.log('Полученные данные сезонов:', seasonsData);
+      
+      this.safeSetState({ seasons: seasonsData });
     } catch (error) {
       console.error('Ошибка при загрузке сезонов:', error);
+      // Set seasons to empty array in case of error
+      this.safeSetState({ seasons: [] });
     }
   };
 
@@ -109,7 +135,7 @@ class MapComponent extends React.Component {
         }))
       });
 
-      this.setState(prevState => ({
+      this.safeSetState(prevState => ({
         seasons: [...prevState.seasons, response.data],
         newSeasonName: '',
         currentSeasonId: response.data.id
@@ -142,13 +168,13 @@ class MapComponent extends React.Component {
                 id: field.id,
                 coordinates: field.coordinates,
                 field_type: field.field_type || 'Неизвестно',
-                color: field.color || this.state.fieldColors[field.field_type] || 'red',
+                color: field.color || 'red',
                 name: field.name || 'Без названия',
                 area: field.area || 0
             }));
 
             console.log('Обновленные полигоны (все поля):', allPolygons);
-            this.setState({ currentSeasonId: null, polygons: allPolygons });
+            this.safeSetState({ currentSeasonId: null, polygons: allPolygons });
         } catch (error) {
             console.error('Ошибка при загрузке всех полей:', error);
             alert('Ошибка при загрузке данных: ' + error.message);
@@ -165,17 +191,24 @@ class MapComponent extends React.Component {
             throw new Error('Некорректные данные полей для сезона');
         }
 
-        const updatedPolygons = fieldsData.map(field => ({
-            id: field.id,
-            coordinates: field.coordinates,
-            field_type: field.seed_name || 'Неизвестно',
-            color: field.seed_color || this.state.fieldColors[field.seed_name] || 'red',
-            name: field.name || 'Без названия',
-            area: field.area || 0
-        }));
+        // Получаем все поля, включая те, которые не были добавлены в сезон
+        const allFieldsResponse = await axios.get(`${API_URL}/fields`);
+        const allFields = allFieldsResponse.data;
+
+        const updatedPolygons = allFields.map(field => {
+            const seasonField = fieldsData.find(f => f.id === field.id);
+            return {
+                id: field.id,
+                coordinates: field.coordinates,
+                field_type: seasonField ? seasonField.seed_name : field.field_type || 'Неизвестно',
+                color: seasonField ? seasonField.seed_color : 'red',
+                name: field.name || 'Без названия',
+                area: field.area || 0
+            };
+        });
 
         console.log('Обновленные полигоны (сезон):', updatedPolygons);
-        this.setState({ currentSeasonId: seasonId, polygons: updatedPolygons });
+        this.safeSetState({ currentSeasonId: seasonId, polygons: updatedPolygons });
     } catch (error) {
         console.error('Ошибка при загрузке данных полей:', error);
         alert('Ошибка при загрузке данных: ' + error.message);
@@ -195,7 +228,7 @@ class MapComponent extends React.Component {
         color: polygon.color
       }));
 
-      this.setState({ polygons, selectedFieldTypes: {} });
+      this.safeSetState({ polygons, selectedFieldTypes: {} });
     } catch (error) {
       console.error('Ошибка при загрузке полигонов:', error);
       alert('Ошибка при загрузе данных: ' + error.message);
@@ -203,7 +236,7 @@ class MapComponent extends React.Component {
   };
 
   handlePolygonNameChange = (event) => {
-    this.setState({ newPolygonName: event.target.value });
+    this.safeSetState({ newPolygonName: event.target.value });
   };
 
   calculateArea = (coordinates) => {
@@ -237,7 +270,7 @@ class MapComponent extends React.Component {
         }
 
         const area = this.calculateArea(coordinates);
-        const roundedArea = Math.round(area); // Округляем площадь
+        const roundedArea = Math.round(area);
 
         try {
             const response = await axios.post(`${API_URL}/fields`, {
@@ -252,15 +285,19 @@ class MapComponent extends React.Component {
                     id: response.data.field.id,
                     coordinates: coordinates,
                     color: 'red',
-                    name: response.data.field.name, // Используем название из ответа сервера
-                    area: response.data.field.area // Используем площадь из ответа сервера
+                    name: response.data.field.name,
+                    area: response.data.field.area
                 };
 
-                this.setState(prevState => ({
-                    polygons: [...prevState.polygons, addedPolygon],
-                    inputCoordinates: [],
-                    newPolygonName: ''
-                }));
+                if (this._isMounted) {
+                    this.setState(prevState => ({
+                        polygons: [...prevState.polygons, addedPolygon],
+                        inputCoordinates: [],
+                        newPolygonName: ''
+                    }));
+                }
+
+                this.loadFields();
             } else {
                 alert('Ошибка при сохранении полигона');
             }
@@ -274,13 +311,13 @@ class MapComponent extends React.Component {
   };
 
   toggleCreationMode = () => {
-    this.setState(prevState => ({
+    this.safeSetState(prevState => ({
       creationMode: !prevState.creationMode
     }));
   };
 
   removeLastPolygon = () => {
-    this.setState(prevState => ({
+    this.safeSetState(prevState => ({
       polygons: prevState.polygons.slice(0, -1)
     }));
   };
@@ -290,24 +327,24 @@ class MapComponent extends React.Component {
 
     const { lat, lng } = e.latlng;
     const newCoordinates = [...this.state.inputCoordinates, `${lat} ${lng}`];
-    this.setState({
+    this.safeSetState({
       inputCoordinates: newCoordinates
     });
   };
 
   selectPolygon = (id) => {
-    this.setState({ selectedPolygonId: id });
+    this.safeSetState({ selectedPolygonId: id });
   };
 
   removeSelectedPolygon = () => {
-    this.setState(prevState => ({
+    this.safeSetState(prevState => ({
       polygons: prevState.polygons.filter(polygon => polygon.id !== prevState.selectedPolygonId),
       selectedPolygonId: null
     }));
   };
 
   clearMarkers = () => {
-    this.setState({ inputCoordinates: [] });
+    this.safeSetState({ inputCoordinates: [] });
   };
 
   calculatePolygonCenter(coordinates) {
@@ -318,7 +355,7 @@ class MapComponent extends React.Component {
 
   handleFieldTypeChange = (polygonId, event) => {
     const selectedFieldType = event.target.value;
-    this.setState(prevState => ({
+    this.safeSetState(prevState => ({
       selectedFieldTypes: {
         ...prevState.selectedFieldTypes,
         [polygonId]: selectedFieldType
@@ -331,7 +368,7 @@ class MapComponent extends React.Component {
       console.error('Цвет для выбранной культуры не найден');
       alert('Цвет для выбранной культуры не найден');
     }
-    this.setState(prevState => ({
+    this.safeSetState(prevState => ({
       polygons: prevState.polygons.map(polygon => 
         polygon.id === polygonId ? { ...polygon, color: selectedFieldColor } : polygon
       )
@@ -340,33 +377,40 @@ class MapComponent extends React.Component {
 
   loadSeeds = async () => {
     try {
-        const response = await axios.get(`${API_URL}/seeds`);
-        const seeds = response.data;
-
-        // Создаем объект fieldTypes и fieldColors
+      console.log('Загружаем семена с:', API_URL);
+      const response = await fetchData('seeds');
+      const seeds = Array.isArray(response.data) ? response.data : [];
+      
+      console.log('Получены данные о семенах:', seeds);
+      
+      if (seeds.length > 0) {
         const fieldTypes = seeds.map(seed => seed.name);
         const fieldColors = seeds.reduce((acc, seed) => {
-            acc[seed.name] = seed.color || 'red';
-            return acc;
+          acc[seed.name] = seed.color || 'red';
+          return acc;
         }, {});
-
-        this.setState({ seeds, fieldTypes, fieldColors });
+        
+        this.safeSetState({ seeds, fieldTypes, fieldColors });
+      } else {
+        console.warn('Нет данных о семенах или получен некорректный формат');
+        this.safeSetState({ seeds: [] });
+      }
     } catch (error) {
-        console.error('Ошибка при загрузке семян:', error);
+      console.error('Ошибка при загрузке семян:', error);
     }
   };
 
   handleSeedChange = (event) => {
     const seedId = event.target.value;
     console.log('Выбранный семя ID:', seedId);
-    this.setState({ currentSeedId: seedId }, this.loadPolygonsFromDatabase);
+    this.safeSetState({ currentSeedId: seedId }, this.loadPolygonsFromDatabase);
   };
 
   editField = async (fieldId) => {
     const field = this.state.fields.find(f => f.id === fieldId);
     if (!field) return;
 
-    this.setState({
+    this.safeSetState({
       editFieldId: field.id,
       newFieldName: field.name,
       newFieldCoordinates: field.coordinates,
@@ -388,7 +432,7 @@ class MapComponent extends React.Component {
         area: parseFloat(newFieldArea)
       });
 
-      this.setState(prevState => ({
+      this.safeSetState(prevState => ({
         fields: prevState.fields.map(field =>
           field.id === editFieldId ? response.data.field : field
         ),
@@ -407,16 +451,16 @@ class MapComponent extends React.Component {
 
   handleFilterChange = (e) => {
     const { name, value } = e.target;
-    this.setState({ [name]: value }, this.filterFields);
+    this.safeSetState({ [name]: value }, this.filterFields);
   };
 
   filterFields = () => {
     const { fields, selectedSeasonId, selectedSeedId } = this.state;
     const filteredFields = fields.filter(field => {
-        const binding = field.bindings.find(b => b.season_id === selectedSeasonId && b.seed_id === selectedSeedId);
-        return binding !== undefined;
+      const binding = field.bindings.find(b => b.season_id === selectedSeasonId && b.seed_id === selectedSeedId);
+      return binding !== undefined;
     });
-    this.setState({ filteredFields });
+    this.safeSetState({ filteredFields });
   };
 
   getFilteredFields = () => {
@@ -441,7 +485,7 @@ class MapComponent extends React.Component {
         };
       });
 
-      this.setState({ polygons });
+      this.safeSetState({ polygons });
     } catch (error) {
       console.error('Ошибка при загрузке полигонов:', error);
       alert('Ошибка при загрузке данных: ' + error.message);
@@ -449,68 +493,102 @@ class MapComponent extends React.Component {
   };
 
   handleFieldSelection = (event) => {
-    this.setState({ selectedFieldId: event.target.value });
+    this.safeSetState({ selectedFieldId: event.target.value });
   };
 
   handleSeasonInputChange = (event) => {
-    this.setState({ selectedSeason: event.target.value });
+    this.safeSetState({ selectedSeason: event.target.value });
   };
 
   handleFieldTypeSelection = (event) => {
     const selectedFieldType = event.target.value;
-    this.setState({ selectedFieldType });
+    const selectedFieldId = this.state.selectedFieldId;
 
-    // Обновляем цвет поля в зависимости от выбранной культуры
-    const selectedFieldColor = this.state.fieldColors[selectedFieldType] || 'red';
-    this.setState({ selectedFieldColor });
+    if (!selectedFieldId) {
+      alert('Пожалуйста, выберите поле');
+      return;
+    }
 
-    this.setState(prevState => ({
+    console.log('Выбранный тип поля:', selectedFieldType);
+    console.log('ID выбранного поля:', selectedFieldId);
+
+    // Обновляем тип и цвет выбранного поля
+    this.safeSetState(prevState => ({
       polygons: prevState.polygons.map(polygon => 
-        polygon.id === prevState.selectedFieldId ? { ...polygon, color: selectedFieldColor } : polygon
-      )
+        polygon.id === selectedFieldId ? { 
+          ...polygon, 
+          field_type: selectedFieldType,
+          color: this.state.fieldColors[selectedFieldType] || 'red'
+        } : polygon
+      ),
+      selectedFieldType
     }));
   };
 
   saveProperty = async () => {
-    const { selectedFieldId, selectedSeason, selectedFieldType, selectedFieldColor } = this.state;
+    const { selectedFieldId, selectedSeason, selectedFieldType, fieldColors } = this.state;
 
-    console.log('Проверка значений:', { selectedFieldId, selectedSeason, selectedFieldType, selectedFieldColor });
-
-    if (!selectedFieldId || !selectedSeason || !selectedFieldType || !selectedFieldColor) {
-      alert('Пожалуйста, заполните все поля.');
+    if (!selectedFieldId || !selectedSeason || !selectedFieldType) {
+      alert('Пожалуйста, заполните все обязательные поля.');
       return;
     }
 
     try {
-        // Получаем seed_id по названию культуры
-        const seedResponse = await axios.get(`${API_URL}/seeds?name=${selectedFieldType}`);
-        if (!seedResponse.data || seedResponse.data.length === 0) {
-            throw new Error('Культура не найдена');
-        }
-        const seedId = seedResponse.data[0].id;
+      console.log('Попытка сохранения данных:', { selectedFieldId, selectedSeason, selectedFieldType });
 
-        // Сохраняем свойства поля
-        await axios.post(`${API_URL}/fields/properties`, {
-            field_id: selectedFieldId,
-            season_name: selectedSeason,
-            seed_id: seedId,
-            seed_color: selectedFieldColor
-        });
+      // Получаем все семена по названию культуры
+      const seedResponse = await axios.get(`${API_URL}/seeds?name=${selectedFieldType}`);
+      if (!seedResponse.data || seedResponse.data.length === 0) {
+        throw new Error(`Культура "${selectedFieldType}" не найдена`);
+      }
 
+      // Используем первое семя с совпадающим названием
+      const matchingSeed = seedResponse.data.find(seed => seed.name === selectedFieldType);
+      if (!matchingSeed) {
+        throw new Error(`Семя для культуры "${selectedFieldType}" не найдено`);
+      }
+
+      const seedId = matchingSeed.id;
+
+      // Получаем цвет для выбранной культуры
+      const seedColor = fieldColors[selectedFieldType] || 'red';
+
+      const dataToSend = {
+        field_id: selectedFieldId,
+        season_name: selectedSeason,
+        seed_id: seedId,
+        seed_color: seedColor
+      };
+
+      console.log('Отправляемые данные:', dataToSend);
+
+      const response = await axios.post(`${API_URL}/fields/properties`, dataToSend);
+      console.log('Ответ сервера:', response.data);
+
+      if (response.data && response.data.success) {
         alert('Данные успешно сохранены!');
+        // Обновляем состояние, если необходимо
+        this.safeSetState({
+          selectedFieldId: null,
+          selectedSeason: '',
+          selectedFieldType: ''
+        });
+      } else {
+        throw new Error('Сервер вернул неуспешный ответ');
+      }
     } catch (error) {
-        console.error('Ошибка при сохранении данных:', error);
-        if (error.response && error.response.data) {
-            console.log('Детали ошибки:', error.response.data);
-            alert(`Ошибка: ${error.response.data.error}`);
-        } else {
-            alert('Ошибка при сохранении данных: ' + error.message);
-        }
+      console.error('Ошибка при сохранении данных:', error);
+      if (error.response) {
+        console.error('Детали ошибки:', error.response.data);
+        alert(`Ошибка: ${error.response.data.error || error.response.data.message}`);
+      } else {
+        alert('Ошибка при сохранении данных: ' + error.message);
+      }
     }
   };
 
   handleSearchNameChange = (event) => {
-    this.setState({ searchPolygonName: event.target.value });
+    this.safeSetState({ searchPolygonName: event.target.value });
   };
 
   searchPolygonsByName = async () => {
@@ -526,20 +604,15 @@ class MapComponent extends React.Component {
       const polygonsData = response.data;
       console.log('Найденные полигоны:', polygonsData);
 
-      this.setState({ polygons: polygonsData });
+      this.safeSetState({ polygons: polygonsData });
     } catch (error) {
       console.error('Ошибка при поиске полигонов:', error);
       alert('Ошибка при поиске полигонов: ' + error.message);
     }
   };
 
-  componentWillUnmount() {
-    // Отмените все асинхронные операции, например, запросы axios
-    this.cancelTokenSource && this.cancelTokenSource.cancel('Component unmounted');
-  }
-
   handleMarkerDoubleClick = (index) => {
-    this.setState(prevState => {
+    this.safeSetState(prevState => {
       const newCoordinates = prevState.inputCoordinates.filter((_, i) => i !== index);
       return { inputCoordinates: newCoordinates };
     });
@@ -547,7 +620,7 @@ class MapComponent extends React.Component {
 
   handleMarkerDragEnd = (e, index) => {
     const { lat, lng } = e.target.getLatLng();
-    this.setState(prevState => {
+    this.safeSetState(prevState => {
       const newCoordinates = [...prevState.inputCoordinates];
       newCoordinates[index] = `${lat} ${lng}`;
       return { inputCoordinates: newCoordinates };
@@ -557,18 +630,14 @@ class MapComponent extends React.Component {
   handleInputChange = (event) => {
     const inputValue = event.target.value;
     const coordinates = inputValue.split(',').map(coord => coord.trim());
-    this.setState({ inputCoordinates: coordinates });
+    this.safeSetState({ inputCoordinates: coordinates });
   };
 
   loadFields = async () => {
     try {
-      const response = await axios.get(`${API_URL}/fields`);
-      // Убедитесь, что response.data является массивом объектов
-      if (Array.isArray(response.data)) {
-        this.setState({ fields: response.data });
-      } else {
-        console.error('Некорректный формат данных:', response.data);
-      }
+      const fieldsResponse = await fetchData('fields');
+      const fields = fieldsResponse.data;
+      this.safeSetState({ fields });
     } catch (error) {
       console.error('Ошибка при загрузке полей:', error);
     }
@@ -581,7 +650,7 @@ class MapComponent extends React.Component {
         });
 
         if (response.data && response.data.id) {
-            this.setState(prevState => ({
+            this.safeSetState(prevState => ({
                 seasons: [...prevState.seasons, response.data],
                 currentSeasonId: response.data.id,
                 newSeasonName: ''
@@ -600,7 +669,7 @@ class MapComponent extends React.Component {
   deleteField = async (fieldId) => {
     try {
       await axios.delete(`${API_URL}/fields/${fieldId}`);
-      this.setState(prevState => ({
+      this.safeSetState(prevState => ({
         fields: prevState.fields.filter(field => field.id !== fieldId)
       }));
       alert('Поле успешно удалено!');
@@ -611,19 +680,19 @@ class MapComponent extends React.Component {
   };
 
   togglePolygonForm = () => {
-    this.setState(prevState => ({
+    this.safeSetState(prevState => ({
       showPolygonForm: !prevState.showPolygonForm
     }));
   };
 
   toggleFieldManagementForm = () => {
-    this.setState(prevState => ({
+    this.safeSetState(prevState => ({
       showFieldManagementForm: !prevState.showFieldManagementForm
     }));
   };
 
   toggleSidebar = () => {
-    this.setState(prevState => ({
+    this.safeSetState(prevState => ({
       isSidebarVisible: !prevState.isSidebarVisible
     }));
   };
@@ -640,7 +709,7 @@ class MapComponent extends React.Component {
         console.log('Культура и цвет успешно созданы:', { name, color });
 
         // Обновляем список культур
-        this.setState(prevState => ({
+        this.safeSetState(prevState => ({
             fieldTypes: [...prevState.fieldTypes, name],
             fieldColors: {
                 ...prevState.fieldColors,
@@ -655,11 +724,122 @@ class MapComponent extends React.Component {
 
   loadPolygons = async () => {
     try {
-      const response = await axios.get(`${API_URL}/fields`);
-      this.setState({ polygons: response.data });
+      console.log('Загружаем полигоны с:', API_URL);
+      const fieldsResponse = await fetchData('fields');
+      const polygonsData = fieldsResponse.data;
+      
+      if (!Array.isArray(polygonsData)) {
+        console.error('Данные полигонов не являются массивом:', polygonsData);
+        return;
+      }
+      
+      // Process and format polygons data
+      const polygons = polygonsData.map(polygon => {
+        let coordinates;
+        
+        if (polygon.coordinates) {
+          // Handle potential nesting differences in coordinates
+          if (Array.isArray(polygon.coordinates[0]) && typeof polygon.coordinates[0][0] === 'number') {
+            // Format is [[lat, lng], [lat, lng], ...]
+            coordinates = polygon.coordinates;
+          } else if (Array.isArray(polygon.coordinates[0]) && Array.isArray(polygon.coordinates[0][0])) {
+            // Format is [[[lat, lng], [lat, lng], ...]]
+            coordinates = polygon.coordinates[0];
+          } else {
+            console.error('Неизвестный формат координат:', polygon.coordinates);
+            coordinates = [];
+          }
+        } else {
+          coordinates = [];
+        }
+        
+        return {
+          id: polygon.id,
+          coordinates: coordinates,
+          color: polygon.color || 'red',
+          name: polygon.name || 'Без названия',
+          field_type: polygon.field_type || 'Неизвестно',
+          area: polygon.area || 0
+        };
+      });
+      
+      this.safeSetState({ polygons, filteredPolygons: polygons });
     } catch (error) {
       console.error('Ошибка при загрузке полигонов:', error);
     }
+  };
+
+  handleCropChange = (event) => {
+    const crop = event.target.value;
+    this.safeSetState({ selectedCrop: crop }, this.filterPolygonsByCrop);
+  };
+
+  filterPolygonsByCrop = () => {
+    const { selectedCrop, polygons } = this.state;
+    
+    if (!selectedCrop) {
+      this.safeSetState({ filteredPolygons: polygons });
+      return;
+    }
+
+    const filtered = polygons.filter(polygon => 
+      polygon.field_type === selectedCrop
+    );
+
+    this.safeSetState({ filteredPolygons: filtered });
+  };
+
+  toggleCropSelector = () => {
+    if (!this.state.currentSeasonId) {
+      alert('Пожалуйста, сначала выберите сезон');
+      return;
+    }
+    this.safeSetState(prevState => ({
+      showCropSelector: !prevState.showCropSelector
+    }));
+  };
+
+  handleCropSelection = (crop) => {
+    if (!this.state.currentSeasonId) {
+      alert('Пожалуйста, сначала выберите сезон');
+      return;
+    }
+
+    // Получаем список культур в текущем сезоне
+    const cropsInSeason = this.state.polygons
+      .map(polygon => polygon.field_type)
+      .filter((value, index, self) => self.indexOf(value) === index);
+
+    // Проверяем, есть ли выбранная культура в текущем сезоне
+    if (!cropsInSeason.includes(crop)) {
+      alert(`Культура "${crop}" отсутствует в текущем сезоне`);
+      return;
+    }
+
+    // Добавляем/убираем культуру из списка выбранных
+    this.safeSetState(prevState => ({
+      selectedCrops: prevState.selectedCrops.includes(crop)
+        ? prevState.selectedCrops.filter(c => c !== crop)
+        : [...prevState.selectedCrops, crop]
+    }), this.filterPolygonsByCrops);
+  };
+
+  filterPolygonsByCrops = () => {
+    const { selectedCrops, polygons } = this.state;
+
+    // Если не выбраны культуры, показываем все полигоны
+    if (selectedCrops.length === 0) {
+      this.safeSetState({ filteredPolygons: polygons });
+      return;
+    }
+
+    // Создаем новый массив полигонов с добавлением информации о выделении
+    const filtered = polygons.map(polygon => ({
+      ...polygon,
+      highlighted: selectedCrops.includes(polygon.field_type)
+    }));
+
+    this.safeSetState({ filteredPolygons: filtered });
   };
 
   render() {
@@ -680,7 +860,31 @@ class MapComponent extends React.Component {
       polylineCoordinates.push(polylineCoordinates[0]);
     }
 
-    const { fieldTypes, fieldColors } = this.state;
+    const { fieldTypes, showCropSelector, selectedCrops } = this.state;
+
+    // Проверяем polygons на тип массива
+    if (!Array.isArray(this.state.polygons)) {
+      console.error('this.state.polygons не является массивом:', this.state.polygons);
+      this.setState({ polygons: [] });
+      return null;
+    }
+    
+    // Проверяем filteredPolygons на тип массива
+    if (!Array.isArray(this.state.filteredPolygons)) {
+      console.error('this.state.filteredPolygons не является массивом:', this.state.filteredPolygons);
+      this.setState({ filteredPolygons: [] });
+      return null;
+    }
+
+    const polygonsToDisplay = this.state.selectedCrops.length > 0
+      ? this.state.filteredPolygons
+      : this.state.polygons;
+
+    // Дополнительная проверка для polygonsToDisplay
+    if (!Array.isArray(polygonsToDisplay)) {
+      console.error('polygonsToDisplay не является массивом:', polygonsToDisplay);
+      return null;
+    }
 
     return (
       <div className="map-container">
@@ -694,7 +898,7 @@ class MapComponent extends React.Component {
           toggleCreationMode={this.toggleCreationMode}
           creationMode={this.state.creationMode}
           showPolygons={this.state.showPolygons}
-          setShowPolygons={(show) => this.setState({ showPolygons: show })}
+          setShowPolygons={(show) => this.safeSetState({ showPolygons: show })}
           fields={this.state.fields}
           handleFieldSelection={this.handleFieldSelection}
           selectedFieldId={this.state.selectedFieldId}
@@ -744,17 +948,18 @@ class MapComponent extends React.Component {
           {polylineCoordinates.length > 1 && (
             <Polyline positions={polylineCoordinates} color="blue" />
           )}
-          {this.state.showPolygons && this.state.polygons.length > 0 && this.state.polygons.map(polygon => {
+          {this.state.showPolygons && polygonsToDisplay.length > 0 && polygonsToDisplay.map(polygon => {
             const fillColor = polygon.color || 'red';
             const fieldType = polygon.field_type || 'Неизвестно';
+            const isHighlighted = polygon.highlighted;
 
             return (
               <Polygon
                 key={polygon.id}
                 positions={polygon.coordinates}
-                color="red"
-                fillColor={fillColor}
-                fillOpacity={0.5}
+                color={isHighlighted ? 'blue' : 'red'}
+                fillColor={fieldType === 'Неизвестно' ? 'transparent' : fillColor}
+                fillOpacity={fieldType === 'Неизвестно' ? 0 : (isHighlighted ? 0.8 : 0.3)}
                 name={polygon.name}
               >
                 <Tooltip permanent direction="center" className="polygon-tooltip">
@@ -763,7 +968,7 @@ class MapComponent extends React.Component {
                 <Popup className="polygon-popup">
                   <div>
                     <p>Имя полигона: {polygon.name}</p>
-                    <p>Тип поля: {fieldType}</p>
+                    <p>Тип поля: {polygon.field_type || 'Неизвестно'}</p>
                     <p>Площадь: {polygon.area || 'Неизвестно'} кв.м</p>
                   </div>
                 </Popup>
@@ -775,22 +980,54 @@ class MapComponent extends React.Component {
           <div className="season-selector">
             <select onChange={this.handleSeasonChange} value={this.state.currentSeasonId || ''}>
               <option value="">Выберите сезон</option>
-              {this.state.seasons.map((season, index) => (
+              {Array.isArray(this.state.seasons) && this.state.seasons.map((season, index) => (
                 <option key={season.id || index} value={season.id}>{season.name}</option>
               ))}
             </select>
           </div>
           <div className="basemap-selector">
-            <button onClick={() => this.setState({ basemap: 'osm' })}>OSM</button>
-            <button onClick={() => this.setState({ basemap: 'hot' })}>HOT</button>
-            <button onClick={() => this.setState({ basemap: 'dark' })}>DARK</button>
-            <button onClick={() => this.setState({ basemap: 'mapbox' })}>MAPBOX</button>
+            <button onClick={() => this.safeSetState({ basemap: 'osm' })}>OSM</button>
+            <button onClick={() => this.safeSetState({ basemap: 'hot' })}>HOT</button>
+            <button onClick={() => this.safeSetState({ basemap: 'dark' })}>DARK</button>
+            <button onClick={() => this.safeSetState({ basemap: 'mapbox' })}>MAPBOX</button>
           </div>
+        </div>
+        <div className="crop-controls">
+          <button 
+            onClick={this.toggleCropSelector}
+            className="crop-selector-button"
+            disabled={!this.state.currentSeasonId}
+          >
+            Поиск культур {this.state.selectedCrops.length > 0 ? `(${this.state.selectedCrops.length})` : ''}
+          </button>
+
+          {showCropSelector && (
+            <div className="crop-selector">
+              {fieldTypes.map((type, index) => (
+                <div key={index} className="crop-option">
+                  <input
+                    type="checkbox"
+                    id={`crop-${index}`}
+                    checked={selectedCrops.includes(type)}
+                    onChange={() => this.handleCropSelection(type)}
+                    disabled={!this.state.currentSeasonId}
+                  />
+                  <label htmlFor={`crop-${index}`}>
+                    {type}
+                    <span 
+                      className="crop-color-indicator"
+                      style={{ backgroundColor: this.state.fieldColors[type] || 'red' }}
+                    />
+                  </label>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <select onChange={this.handleFieldTypeSelection}>
           {fieldTypes.map((type, index) => (
             <option key={index} value={type}>
-              {type} ({fieldColors[type] || 'red'})
+              {type} ({this.state.fieldColors[type] || 'red'})
             </option>
           ))}
         </select>
