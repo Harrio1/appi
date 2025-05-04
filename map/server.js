@@ -205,7 +205,7 @@ app.get('*', (req, res) => {
 
 // Запускаем сервер
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Сервер запущен на http://localhost:${PORT}`);
-  console.log(`API доступно на http://localhost:${PORT}/api`);
-  console.log(`Проверка API: http://localhost:${PORT}/api/health`);
+  console.log(`Сервер запущен на http://LOCALHOST:${PORT}`);
+  console.log(`API доступно на http://LOCALHOST:${PORT}/api`);
+  console.log(`Проверка API: http://LOCALHOST:${PORT}/api/health`);
 }); 

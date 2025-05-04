@@ -18,7 +18,7 @@ const sockPort = process.env.WDS_SOCKET_PORT;
 const app = express();
 
 app.use(cors({
-  origin: 'http://localhost'
+  origin: 'http://LOCALHOST'
 }));
 
 module.exports = function (proxy, allowedHost) {
@@ -41,9 +41,9 @@ module.exports = function (proxy, allowedHost) {
     // So we will disable the host check normally, but enable it if you have
     // specified the `proxy` setting. Finally, we let you override it if you
     // really know what you're doing with a special environment variable.
-    // Note: ["localhost", ".localhost"] will support subdomains - but we might
+    // Note: ["LOCALHOST", ".LOCALHOST"] will support subdomains - but we might
     // want to allow setting the allowedHosts manually for more complex setups
-    allowedHosts: ['localhost'],
+    allowedHosts: ['LOCALHOST'],
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': '*',

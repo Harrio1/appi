@@ -13,7 +13,7 @@ const apiPort = '3003';
 const mobileMode = process.env.REACT_APP_MOBILE_MODE === 'true';
 
 // Определение хоста для API запросов
-let apiHost = 'localhost';
+let apiHost = 'LOCALHOST';
 if (process.env.REACT_APP_API_HOST) {
   // Если хост явно указан в переменных окружения, используем его
   apiHost = process.env.REACT_APP_API_HOST;

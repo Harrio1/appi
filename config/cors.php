@@ -1,6 +1,6 @@
 <?php
 
-$host = getenv('HOST') ?: 'localhost';
+$host = getenv('HOST') ?: 'LOCALHOST';
 $port = getenv('PORT') ?: '3003';
 
 return [

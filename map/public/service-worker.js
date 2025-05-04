@@ -90,7 +90,7 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET' || 
       url.pathname.startsWith('/api/') || 
       url.href.includes('chrome-extension') ||
-      url.href.includes('localhost:3003') ||
+      url.href.includes('LOCALHOST:3003') ||
       url.href.includes('sockjs-node') ||
       url.href.includes('hot-update')) {
     return;

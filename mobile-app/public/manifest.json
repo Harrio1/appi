@@ -1,0 +1,48 @@
+{
+  "short_name": "Агро Карта",
+  "name": "Агро Карта Мобильное",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#4CAF50",
+  "background_color": "#f5f5f5",
+  "prefer_related_applications": false,
+  "screenshots": [
+    {
+      "src": "screenshot1.png",
+      "sizes": "320x640",
+      "type": "image/png"
+    },
+    {
+      "src": "screenshot2.png",
+      "sizes": "320x640",
+      "type": "image/png"
+    }
+  ],
+  "description": "Мобильное приложение для управления сельскохозяйственными полями",
+  "shortcuts": [
+    {
+      "name": "Открыть карту",
+      "short_name": "Карта",
+      "description": "Открыть карту полей",
+      "url": "/",
+      "icons": [{ "src": "logo192.png", "sizes": "192x192" }]
+    }
+  ]
+} 

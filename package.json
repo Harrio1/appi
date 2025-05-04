@@ -2,10 +2,10 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "dev": "node server.mjs --host=localhost --port=8000",
+        "dev": "node server.mjs --host=LOCALHOST --port=8000",
         "build": "vite build",
         "start": "concurrently \"npm run start-server\" \"npm run start-client\"",
-        "start-server": "node server.mjs --host=localhost --port=8000",
+        "start-server": "node server.mjs --host=LOCALHOST --port=8000",
         "start-client": "cd map && npm run dev"
     },
     "devDependencies": {

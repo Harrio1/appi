@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#007bff" />
+    <meta name="description" content="Мобильное приложение для агрономов" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    
+    <!-- Добавляем стили Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""/>
+      
+    <title>АгроМоб - мобильная карта полей</title>
+    
+    <!-- iOS специфичные мета-теги -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="АгроМоб">
+    
+    <!-- PWA специфичные стили для экрана загрузки -->
+    <style>
+      .splash-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #f8f9fa;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+      }
+      
+      .splash-logo {
+        width: 150px;
+        height: 150px;
+        animation: pulse 1.5s infinite;
+      }
+      
+      .splash-title {
+        margin-top: 20px;
+        font-size: 24px;
+        font-weight: bold;
+        color: #007bff;
+      }
+      
+      @keyframes pulse {
+        0% { transform: scale(0.95); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(0.95); }
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>Для работы приложения необходимо включить JavaScript.</noscript>
+    
+    <!-- Экран загрузки для PWA -->
+    <div class="splash-screen" id="splash">
+      <img src="%PUBLIC_URL%/logo192.png" alt="АгроМоб" class="splash-logo">
+      <div class="splash-title">АгроМоб</div>
+    </div>
+    
+    <div id="root"></div>
+    
+    <script>
+      // Скрываем экран загрузки после загрузки приложения
+      window.addEventListener('load', function() {
+        // Даем небольшую задержку для лучшего UX
+        setTimeout(function() {
+          const splash = document.getElementById('splash');
+          if (splash) {
+            splash.style.opacity = '0';
+            splash.style.transition = 'opacity 0.5s';
+            setTimeout(function() {
+              splash.style.display = 'none';
+            }, 500);
+          }
+        }, 1000);
+      });
+      
+      // Регистрируем сервис-воркер для PWA
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/service-worker.js')
+            .then(function(registration) {
+              console.log('ServiceWorker регистрация успешна:', registration.scope);
+            })
+            .catch(function(error) {
+              console.log('Ошибка регистрации ServiceWorker:', error);
+            });
+        });
+      }
+    </script>
+  </body>
+</html> 

@@ -9,14 +9,16 @@ const app = express();
 
 // Разрешаем запросы с любого источника (или укажите конкретный домен)
 app.use(cors({
-  origin: '*', // Разрешаем запросы с любого источника
+  origin: ['http://localhost:3000', 'http://localhost:3003', 'http://192.168.1.110:3000'], // Явно разрешаем запросы с IP-адреса
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
 app.use(express.json());
 
+// Добавляем логирование для отладки
 app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
     res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.header('Pragma', 'no-cache');
     res.header('Expires', '0');
@@ -25,7 +27,7 @@ app.use((req, res, next) => {
 
 // Получаем аргументы командной строки
 const args = process.argv.slice(2);
-const host = args.includes('--host') ? args[args.indexOf('--host') + 1] : 'localhost';
+const host = args.includes('--host') ? args[args.indexOf('--host') + 1] : 'LOCALHOST';
 const port = args.includes('--port') ? parseInt(args[args.indexOf('--port') + 1]) : 8000;
 
 // Логируем параметры запуска
@@ -282,7 +284,10 @@ process.on('unhandledRejection', (err) => {
   console.error('Необработанный промис:', err);
 });
 
-app.listen(port, host, () => {
+// Меняем аргумент host на '0.0.0.0', чтобы слушать на всех IP-адресах
+app.listen(port, '0.0.0.0', () => {
   console.log(`Сервер запущен на http://${host}:${port}`);
+  console.log(`Также доступен на http://0.0.0.0:${port}`);
+  console.log(`IP интерфейсы: 192.168.1.110:${port}`);
 });
 
