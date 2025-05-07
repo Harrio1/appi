@@ -10,12 +10,7 @@ const apiPort = '8000';
 const checkServerAvailability = async (url) => {
   try {
     await axios.get(`${url}/health`, { 
-      timeout: 2000,
-      withCredentials: true,  // Добавляем для CORS с credentials
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      }
+      timeout: 2000
     });
     console.log(`Сервер ${url} доступен`);
     return true;
@@ -28,10 +23,10 @@ const checkServerAvailability = async (url) => {
 // Определяем IP адрес API сервера с возможностью переключения
 let apiHost;
 
-// В production версии (на телефоне) пробуем разные IP-адреса
+// В production версии (на телефоне) используем прокси
 if (process.env.NODE_ENV === 'production') {
-  apiHost = ' 192.168.1.110'; // IP вашего сервера
-  baseUrl = `http://${apiHost}:${apiPort}/api`;
+  apiHost = window.location.hostname; // Используем тот же хост
+  baseUrl = `/api`; // Используем относительный путь без хоста и порта
 } else {
   // В режиме разработки пробуем использовать localhost
   if (window.location.hostname === 'localhost') {
@@ -39,7 +34,8 @@ if (process.env.NODE_ENV === 'production') {
   } else {
     apiHost = window.location.hostname; // Используем текущий хост
   }
-  baseUrl = `http://${apiHost}:${apiPort}/api`;
+  // Используем относительный путь для API, которые будут обрабатываться через прокси
+  baseUrl = `/api`;
 }
 
 // Логируем API URL при запуске для отладки
@@ -49,7 +45,7 @@ console.log('Хост приложения:', window.location.hostname);
 
 export const API_URL = baseUrl;
 
-// Создаем экземпляр axios с подходящими настройками для CORS
+// Создаем экземпляр axios с подходящими настройками
 export const apiClient = axios.create({
   baseURL: baseUrl,
   timeout: 5000,
@@ -57,8 +53,7 @@ export const apiClient = axios.create({
     'Content-Type': 'application/json',
     'Accept': 'application/json',
     'Cache-Control': 'no-cache'
-  },
-  withCredentials: true
+  }
 });
 
 // Добавляем перехватчик для вывода информации о запросах
@@ -76,16 +71,6 @@ apiClient.interceptors.request.use(
 // Добавляем перехватчик для обработки ответов и ошибок
 apiClient.interceptors.response.use(
   (response) => {
-    // Логирование успешных ответов для отладки
-    if (response.config.url.includes('/api/')) {
-      console.log(`Получен ответ от API ${response.config.url}:`, {
-        status: response.status,
-        data_length: Array.isArray(response.data) ? response.data.length : 'не массив',
-        sample: Array.isArray(response.data) && response.data.length > 0 
-          ? JSON.stringify(response.data[0]).substring(0, 100) + '...' 
-          : 'нет данных'
-      });
-    }
     return response;
   },
   (error) => {
@@ -114,7 +99,7 @@ export const handleRateLimitedRequest = async (requestFunc, key, retryCount = 0)
     if (error.code === 'ECONNREFUSED' && apiHost !== 'localhost' && retryCount === 0) {
       console.log('Попытка переключения на localhost...');
       apiHost = 'localhost';
-      baseUrl = `http://${apiHost}:${apiPort}/api`;
+      baseUrl = `/api`;
       apiClient.defaults.baseURL = baseUrl;
       console.log('API URL изменен на:', baseUrl);
       return handleRateLimitedRequest(requestFunc, key, retryCount + 1);
@@ -147,4 +132,4 @@ export const fetchData = async (endpoint) => {
   }
 };
 
-export default API_URL;
+export default API_URL; 

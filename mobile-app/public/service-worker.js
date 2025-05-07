@@ -1,5 +1,5 @@
 // Имя кэша для нашего приложения
-const CACHE_NAME = 'agro-mob-v2';
+const CACHE_NAME = 'agro-mob-v3';
 const API_CACHE_NAME = 'agro-mob-api-v1';
 
 // Файлы, которые будем кэшировать при установке
@@ -14,13 +14,32 @@ const urlsToCache = [
   '/static/css/main.css',
 ];
 
+// Функция для проверки, можно ли кэшировать запрос
+const isCacheableRequest = (request) => {
+  try {
+    // Проверяем URL и его схему
+    const url = new URL(request.url);
+    // Кэшируем только http и https схемы
+    return (url.protocol === 'http:' || url.protocol === 'https:');
+  } catch (e) {
+    console.error('Ошибка при проверке URL запроса:', e);
+    return false;
+  }
+};
+
 // Установка сервис-воркера и кэширование статических ресурсов
 self.addEventListener('install', (event) => {
+  console.log('Service Worker установка v3');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
         console.log('Кэш открыт');
-        return cache.addAll(urlsToCache);
+        return cache.addAll(urlsToCache)
+          .catch(error => {
+            console.error('Ошибка при кэшировании статических ресурсов:', error);
+            // Продолжаем установку даже при ошибке кэширования
+            return Promise.resolve();
+          });
       })
   );
   
@@ -30,6 +49,7 @@ self.addEventListener('install', (event) => {
 
 // Активация нового сервис-воркера и удаление старых кэшей
 self.addEventListener('activate', (event) => {
+  console.log('Service Worker активация v3');
   const cacheWhitelist = [CACHE_NAME, API_CACHE_NAME];
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -39,6 +59,7 @@ self.addEventListener('activate', (event) => {
             console.log('Удаление устаревшего кэша:', cacheName);
             return caches.delete(cacheName);
           }
+          return Promise.resolve();
         })
       );
     }).then(() => {
@@ -50,83 +71,130 @@ self.addEventListener('activate', (event) => {
 
 // Обработка запросов и возврат данных из кэша (или сети, если в кэше нет)
 self.addEventListener('fetch', (event) => {
+  // Игнорируем все запросы к chrome-extension
+  if (event.request.url.startsWith('chrome-extension://')) {
+    return;
+  }
+  
+  // Проверяем, можно ли кэшировать запрос (исключаем chrome-extension и другие схемы)
+  if (!isCacheableRequest(event.request)) {
+    console.log('Пропускаем некэшируемый запрос:', event.request.url);
+    return;
+  }
+  
   // Проверяем, является ли запрос API запросом
   const isApiRequest = event.request.url.includes('/api/');
   
-  if (isApiRequest) {
-    // Для API запросов используем стратегию "сеть с fallback на кэш"
-    event.respondWith(
-      fetch(event.request.clone())
-        .then((response) => {
-          // Проверяем валидность ответа
-          if (!response || response.status !== 200) {
-            return response;
-          }
+  try {
+    if (isApiRequest) {
+      // Для API запросов используем стратегию "сеть с fallback на кэш"
+      event.respondWith(
+        fetch(event.request.clone())
+          .then((response) => {
+            // Проверяем валидность ответа
+            if (!response || response.status !== 200) {
+              return response;
+            }
 
-          // Клонируем ответ для кэширования
-          const responseToCache = response.clone();
-          
-          // Кэшируем ответ API в отдельный кэш для API
-          caches.open(API_CACHE_NAME)
-            .then((cache) => {
-              cache.put(event.request, responseToCache);
-              console.log('API ответ закэширован:', event.request.url);
-            });
-
-          return response;
-        })
-        .catch(() => {
-          console.log('Не удалось загрузить API из сети, пробуем кэш:', event.request.url);
-          return caches.match(event.request)
-            .then((cachedResponse) => {
-              if (cachedResponse) {
-                console.log('Найден в кэше:', event.request.url);
-                return cachedResponse;
-              }
-              
-              // Если в кэше ничего нет, возвращаем ошибку
-              console.log('Не найдено в кэше:', event.request.url);
-              return new Response(JSON.stringify({ 
-                error: 'Данные недоступны в оффлайн режиме' 
-              }), {
-                headers: { 'Content-Type': 'application/json' },
-                status: 503,
-                statusText: 'Service Unavailable'
-              });
-            });
-        })
-    );
-  } else {
-    // Для статических ресурсов используем стратегию "кэш с fallback на сеть"
-    event.respondWith(
-      caches.match(event.request)
-        .then((cachedResponse) => {
-          if (cachedResponse) {
-            // Возвращаем из кэша, если есть
-            return cachedResponse;
-          }
-          
-          // Иначе делаем запрос к сети
-          return fetch(event.request)
-            .then((response) => {
-              // Если ресурс не найден или не валидный, просто возвращаем
-              if (!response || response.status !== 200 || response.type !== 'basic') {
-                return response;
-              }
-              
+            try {
               // Клонируем ответ для кэширования
               const responseToCache = response.clone();
               
-              // Сохраняем в кэш
-              caches.open(CACHE_NAME)
+              // Кэшируем ответ API в отдельный кэш для API
+              caches.open(API_CACHE_NAME)
                 .then((cache) => {
                   cache.put(event.request, responseToCache);
+                  console.log('API ответ закэширован:', event.request.url);
+                })
+                .catch(error => {
+                  console.error('Ошибка при кэшировании API:', error);
                 });
+            } catch (error) {
+              console.error('Ошибка при обработке кэширования:', error);
+            }
+
+            return response;
+          })
+          .catch(() => {
+            console.log('Не удалось загрузить API из сети, пробуем кэш:', event.request.url);
+            return caches.match(event.request)
+              .then((cachedResponse) => {
+                if (cachedResponse) {
+                  console.log('Найден в кэше:', event.request.url);
+                  return cachedResponse;
+                }
                 
-              return response;
-            });
-        })
-    );
+                // Если в кэше ничего нет, возвращаем ошибку
+                console.log('Не найдено в кэше:', event.request.url);
+                return new Response(JSON.stringify({ 
+                  error: 'Данные недоступны в оффлайн режиме' 
+                }), {
+                  headers: { 'Content-Type': 'application/json' },
+                  status: 503,
+                  statusText: 'Service Unavailable'
+                });
+              })
+              .catch(error => {
+                console.error('Ошибка при получении данных из кэша:', error);
+                return new Response(JSON.stringify({ error: 'Ошибка сервиса' }), {
+                  headers: { 'Content-Type': 'application/json' },
+                  status: 500
+                });
+              });
+          })
+      );
+    } else {
+      // Для статических ресурсов используем стратегию "кэш с fallback на сеть"
+      event.respondWith(
+        caches.match(event.request)
+          .then((cachedResponse) => {
+            if (cachedResponse) {
+              // Возвращаем из кэша, если есть
+              return cachedResponse;
+            }
+            
+            // Иначе делаем запрос к сети
+            return fetch(event.request)
+              .then((response) => {
+                // Если ресурс не найден или не валидный, просто возвращаем
+                if (!response || response.status !== 200 || response.type !== 'basic') {
+                  return response;
+                }
+                
+                try {
+                  // Проверяем еще раз, можно ли кэшировать этот ответ
+                  if (isCacheableRequest(event.request)) {
+                    // Клонируем ответ для кэширования
+                    const responseToCache = response.clone();
+                    
+                    // Сохраняем в кэш
+                    caches.open(CACHE_NAME)
+                      .then((cache) => {
+                        cache.put(event.request, responseToCache);
+                      })
+                      .catch(error => {
+                        console.error('Ошибка при сохранении в кэш:', error);
+                      });
+                  }
+                } catch (error) {
+                  console.error('Ошибка при обработке кэширования:', error);
+                }
+                  
+                return response;
+              })
+              .catch(error => {
+                console.error('Ошибка при загрузке ресурса:', error);
+                return new Response('Ошибка загрузки ресурса', { status: 500 });
+              });
+          })
+          .catch(error => {
+            console.error('Ошибка при проверке кэша:', error);
+            return fetch(event.request);
+          })
+      );
+    }
+  } catch (error) {
+    console.error('Критическая ошибка в обработчике fetch:', error);
   }
 });
 

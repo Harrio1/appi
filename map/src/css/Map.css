@@ -106,14 +106,19 @@
 }
 
 .season-selector {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 1000;
+  position: relative;
   background-color: white;
   padding: 5px;
   border-radius: 5px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  width: 180px;
+}
+
+.season-selector select {
+  width: 100%;
+  padding: 5px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
 }
 
 .basemap-selector {
@@ -145,10 +150,8 @@
 }
 
 .crop-controls {
-  position: absolute;
-  top: 10px;
-  right: 200px;
-  z-index: 1000;
+  position: relative;
+  z-index: 1001;
 }
 
 .crop-selector-button {
@@ -158,8 +161,12 @@
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
-  width: 250px;
+  width: 180px;
   text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
 
 .crop-selector-button:hover {
@@ -181,9 +188,17 @@
   border: 1px solid #ddd;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-  width: 250px;
+  width: 200px;
   max-height: 300px;
   overflow-y: auto;
+}
+
+.crop-filter {
+  width: 100%;
+  padding: 5px;
+  margin-bottom: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
 }
 
 .crop-option {
@@ -223,6 +238,23 @@
   border-radius: 50%;
   margin-left: 8px;
   border: 1px solid rgba(0,0,0,0.1);
+}
+
+.bottom-controls {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+}
+
+.map-controls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1000;
+  display: flex;
+  gap: 10px;
 }
 
 .leaflet-pane .leaflet-overlay-pane path {

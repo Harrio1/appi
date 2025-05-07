@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import L from 'leaflet';
-import { MapContainer, TileLayer, ZoomControl, Polygon, Tooltip } from "react-leaflet";
+import { MapContainer, TileLayer, ZoomControl, Polygon, Tooltip, Marker } from "react-leaflet";
 // Используем новые сервисы для оффлайн режима
 import ApiService from '../utils/apiService';
 import '../css/MobileMap.css';
@@ -11,14 +11,19 @@ L.Icon.Default.imagePath = "https://unpkg.com/leaflet@1.9.4/dist/images/";
 // Добавляем логирование для отладки
 console.log('MobileMap инициализирован');
 
+// Добавляем информацию о текущей конфигурации
+console.log('Текущий URL приложения:', window.location.href);
+console.log('Режим разработки:', process.env.NODE_ENV === 'development' ? 'Да' : 'Нет');
+console.log('Состояние сети:', navigator.onLine ? 'Онлайн' : 'Оффлайн');
+
 const MobileMap = () => {
   // Добавляем ref для отслеживания, смонтирован ли компонент
   const isMounted = useRef(true);
   
   // Фиксированные координаты для центра карты (вместо геолокации)
-  const [lat, setLat] = useState(46.536032);
-  const [lng, setLng] = useState(41.031736);
-  const [zoom, setZoom] = useState(10);
+  const [lat, setLat] = useState(46.3);        // Обновленный центр по данным со скриншота
+  const [lng, setLng] = useState(41.9);        // Обновленный центр по данным со скриншота
+  const [zoom, setZoom] = useState(10);       // Меньший зум для отображения всех полей
   const [basemap, setBasemap] = useState('mapbox');
   const [polygons, setPolygons] = useState([]);
   const [seasons, setSeasons] = useState([]);
@@ -181,26 +186,153 @@ const MobileMap = () => {
         data = await ApiService.fetchFields(forceOffline);
       }
       
-      console.log('Получены данные полей:', data);
+      console.log('Получены данные полей, количество:', data ? data.length : 0);
+      
+      // Дополнительное логирование формата данных
+      if (data && data.length > 0) {
+        console.log('Пример первого поля:', JSON.stringify(data[0]).substring(0, 200) + '...');
+        
+        // Проверяем наличие координат в каждом поле
+        let fieldsWithCoordinates = 0;
+        let fieldsWithValidCoordinates = 0;
+        let coordinateFormats = new Set();
+        
+        data.forEach((field, index) => {
+          if (field.coordinates) {
+            fieldsWithCoordinates++;
+            
+            // Определяем формат координат
+            let format = 'unknown';
+            if (typeof field.coordinates === 'string') {
+              format = 'string';
+            } else if (Array.isArray(field.coordinates)) {
+              if (field.coordinates.length === 0) {
+                format = 'empty_array';
+              } else if (typeof field.coordinates[0] === 'number') {
+                format = 'flat_array_of_numbers';
+              } else if (Array.isArray(field.coordinates[0])) {
+                if (field.coordinates[0].length === 2 && typeof field.coordinates[0][0] === 'number') {
+                  format = 'array_of_points';
+                  fieldsWithValidCoordinates++;
+                } else if (Array.isArray(field.coordinates[0][0])) {
+                  format = 'nested_arrays';
+                  fieldsWithValidCoordinates++;
+                }
+              }
+            } else if (typeof field.coordinates === 'object') {
+              if (field.coordinates.coordinates) {
+                format = 'object_with_coordinates';
+                fieldsWithValidCoordinates++;
+              } else if (field.coordinates.type) {
+                format = 'geojson';
+                fieldsWithValidCoordinates++;
+              }
+            }
+            
+            coordinateFormats.add(format);
+            
+            // Дополнительное логирование для выборочных полей
+            if (index < 3 || index === data.length - 1) {
+              console.log(`Поле ${index}, ID: ${field.id}, формат координат: ${format}`);
+            }
+          }
+        });
+        
+        console.log(`Статистика полей: всего ${data.length}, с координатами ${fieldsWithCoordinates}, с валидными координатами ${fieldsWithValidCoordinates}`);
+        console.log('Обнаруженные форматы координат:', Array.from(coordinateFormats));
+      }
+      
+      // Проверяем, имеют ли данные правильный формат
+      const validData = Array.isArray(data) ? data : [];
+      
+      if (validData.length === 0) {
+        console.warn('Получен пустой массив данных полей');
+        if (isMounted.current) {
+          setPolygons([]);
+          setFilteredPolygons([]);
+          setIsLoading(false);
+        }
+        return;
+      }
       
       // Проверяем и преобразуем координаты для корректного отображения
-      const processedPolygons = data.map(field => {
+      const processedPolygons = validData.map((field, index) => {
+        // Создаем копию поля для изменений
+        const processedField = { ...field };
         let coordinates = field.coordinates;
         
-        // Если координаты не в правильном формате, преобразуем их
-        if (coordinates && !Array.isArray(coordinates[0][0])) {
-          coordinates = [coordinates];
+        // Дополнительное логирование для отладки
+        console.log(`Обработка поля ${index}, ID: ${field.id || 'неизвестен'}, тип координат:`, typeof coordinates);
+        
+        try {
+          // Если координаты не в правильном формате, преобразуем их
+          if (coordinates) {
+            // Проверяем, если координаты - строка, пытаемся распарсить JSON
+            if (typeof coordinates === 'string') {
+              try {
+                coordinates = JSON.parse(coordinates);
+                console.log(`Поле ${index}: координаты успешно распарсены из JSON`);
+              } catch (e) {
+                console.error(`Поле ${index}: ошибка парсинга координат из JSON:`, e);
+                coordinates = [];
+              }
+            }
+            
+            // Убеждаемся, что координаты в правильном формате [[[lon,lat],...]]
+            if (Array.isArray(coordinates)) {
+              // Если координаты не имеют правильной вложенности
+              if (coordinates.length > 0) {
+                if (!Array.isArray(coordinates[0])) {
+                  // Формат [lon,lat] -> [[[lon,lat]]]
+                  console.log(`Поле ${index}: преобразование из формата [lon,lat]`);
+                  coordinates = [[coordinates]];
+                } else if (!Array.isArray(coordinates[0][0])) {
+                  // Формат [[lon,lat], [lon,lat]] -> [[[lon,lat], [lon,lat]]]
+                  console.log(`Поле ${index}: преобразование из формата [[lon,lat], ...]`);
+                  coordinates = [coordinates];
+                }
+              } else {
+                console.warn(`Поле ${index}: пустой массив координат`);
+                coordinates = [];
+              }
+            } else {
+              console.warn(`Поле ${index}: координаты не являются массивом:`, typeof coordinates);
+              coordinates = [];
+            }
+          } else {
+            console.warn(`Поле ${index}: координаты отсутствуют`);
+            coordinates = [];
+          }
+        } catch (error) {
+          console.error(`Ошибка при обработке координат поля ${index}:`, error);
+          coordinates = [];
         }
         
-        return {
-          ...field,
-          coordinates: coordinates
-        };
+        // Логируем результат обработки
+        console.log(`Поле ${index} после обработки:`, 
+                   coordinates.length > 0 ? 
+                   `уровни вложенности: ${Array.isArray(coordinates) ? 1 : 0}→${Array.isArray(coordinates[0]) ? 2 : 0}→${coordinates[0] && Array.isArray(coordinates[0][0]) ? 3 : 0}` : 
+                   'нет координат');
+        
+        processedField.coordinates = coordinates;
+        return processedField;
       });
       
-      console.log('Обработанные полигоны:', processedPolygons);
-      
       if (isMounted.current) {
+        console.log('Обработанные полигоны, количество:', processedPolygons.length);
+        
+        // Проверяем, что хотя бы один полигон имеет координаты
+        const hasValidPolygons = processedPolygons.some(
+          polygon => polygon.coordinates && 
+                    polygon.coordinates.length > 0 && 
+                    polygon.coordinates[0] && 
+                    polygon.coordinates[0].length > 0
+        );
+        
+        if (!hasValidPolygons) {
+          console.warn('Ни один полигон не имеет действительных координат!');
+        }
+        
         setPolygons(processedPolygons);
         setFilteredPolygons(processedPolygons);
         
@@ -312,69 +444,106 @@ const MobileMap = () => {
     }
 
     console.log(`Отображаем ${filteredPolygons.length} полигонов`);
+    console.log('Примеры полигонов:', filteredPolygons.slice(0, 2));
 
     // Ограничиваем количество отображаемых полигонов для лучшей производительности
     const maxDisplayedPolygons = 500;
     const polygonsToRender = filteredPolygons.slice(0, maxDisplayedPolygons);
 
-    return polygonsToRender.map((polygon) => {
-      // Проверяем наличие координат и выводим отладочную информацию
-      console.log('Полигон ID:', polygon.id, 'Координаты:', polygon.coordinates);
+    return polygonsToRender.map((polygon, index) => {
+      // Проверяем наличие координат
+      if (!polygon.coordinates) {
+        console.warn(`Полигон ${index} ID: ${polygon.id || 'неизвестен'} - координаты отсутствуют`);
+        return null;
+      }
+      
+      console.log(`Полигон ${index} ID:`, polygon.id, 'Координаты:', JSON.stringify(polygon.coordinates).substring(0, 50) + '...');
 
-      // Получаем первый набор координат (первый полигон)
+      // Преобразуем координаты в формат для Leaflet
       let coordinates = [];
       
       try {
-        if (polygon.coordinates && polygon.coordinates.length > 0) {
-          // Проверяем различные форматы координат
-          if (Array.isArray(polygon.coordinates[0]) && Array.isArray(polygon.coordinates[0][0])) {
-            // Формат [[[lon, lat], [lon, lat], ...]]
-            coordinates = polygon.coordinates[0].map(coord => {
-              // Проверяем и исправляем возможные проблемы с координатами
-              if (coord && coord.length >= 2) {
-                // Нормализуем координаты в правильном порядке [lat, lon]
-                const lat = typeof coord[1] === 'number' ? coord[1] : parseFloat(coord[1]);
-                const lon = typeof coord[0] === 'number' ? coord[0] : parseFloat(coord[0]);
-                
-                // Проверяем, что координаты - валидные числа
-                if (!isNaN(lat) && !isNaN(lon)) {
-                  return [lat, lon];
-                }
-              }
-              return null;
-            }).filter(coord => coord !== null);
-          } else if (Array.isArray(polygon.coordinates)) {
-            // Пробуем обработать формат [[lon, lat], [lon, lat], ...] или другие варианты
-            coordinates = polygon.coordinates.map(coord => {
-              if (Array.isArray(coord) && coord.length >= 2) {
-                const lat = typeof coord[1] === 'number' ? coord[1] : parseFloat(coord[1]);
-                const lon = typeof coord[0] === 'number' ? coord[0] : parseFloat(coord[0]);
-                
-                if (!isNaN(lat) && !isNaN(lon)) {
-                  return [lat, lon];
-                }
-              }
-              return null;
-            }).filter(coord => coord !== null);
+        // Получаем координаты в нужном формате
+        let coords = polygon.coordinates;
+        
+        // Если координаты в формате строки, преобразуем их в объект
+        if (typeof coords === 'string') {
+          try {
+            coords = JSON.parse(coords);
+            console.log(`Полигон ${index}: координаты преобразованы из строки в объект`);
+          } catch (e) {
+            console.error(`Ошибка парсинга JSON координат для полигона ${index}:`, e);
+            return null;
           }
         }
+        
+        // Определяем формат данных на основе скриншота и структуры
+        // Формат из скриншота: массив координат [[lat, lon], [lat, lon], ...]
+        if (Array.isArray(coords) && Array.isArray(coords[0]) && coords[0].length === 2 && 
+            typeof coords[0][0] === 'number' && typeof coords[0][1] === 'number') {
+          console.log(`Полигон ${index}: обнаружен формат массива точек`);
+          // Поскольку на скриншоте видны правильно отображаемые поля,
+          // предполагаем что координаты уже в правильном формате [lat, lon]
+          coordinates = [coords];
+        }
+        // Формат вложенных массивов: [[[lat, lon], [lat, lon], ...]]
+        else if (Array.isArray(coords) && Array.isArray(coords[0]) && 
+                 Array.isArray(coords[0][0]) && coords[0][0].length === 2) {
+          console.log(`Полигон ${index}: формат вложенных массивов`);
+          coordinates = coords;
+        }
+        // Формат GeoJSON: {"type": "Polygon", "coordinates": [[[lon, lat], ...]]}
+        else if (coords.type === 'Polygon' && Array.isArray(coords.coordinates)) {
+          console.log(`Полигон ${index}: формат GeoJSON Polygon`);
+          // Для GeoJSON нужно поменять местами [lon, lat] -> [lat, lon]
+          coordinates = coords.coordinates.map(ring => 
+            ring.map(coord => [coord[1], coord[0]])
+          );
+        }
+        // Формат с coordinates в объекте: {coordinates: [[lat, lon], ...]}
+        else if (coords.coordinates && Array.isArray(coords.coordinates)) {
+          console.log(`Полигон ${index}: формат с coordinates в объекте`);
+          // Если координаты уже в формате [[lat, lon], ...]
+          coordinates = [coords.coordinates];
+        }
+        // Плоский массив чисел [lat, lon, lat, lon, ...]
+        else if (Array.isArray(coords) && coords.length >= 4 && typeof coords[0] === 'number') {
+          console.log(`Полигон ${index}: плоский массив координат`);
+          const ring = [];
+          for (let i = 0; i < coords.length; i += 2) {
+            if (i + 1 < coords.length) {
+              ring.push([coords[i], coords[i+1]]);
+            }
+          }
+          coordinates = [ring];
+        }
+        else {
+          console.warn(`Полигон ${index}: неизвестный формат координат:`, coords);
+          return null;
+        }
+        
+        // Дополнительная проверка, что координаты правильно преобразованы
+        if (coordinates && coordinates.length > 0 && coordinates[0] && coordinates[0].length > 0) {
+          console.log(`Полигон ${index}: координаты после преобразования:`, 
+                     `${coordinates.length} колец, ${coordinates[0].length} точек в первом кольце`);
+          console.log(`Первая точка: [${coordinates[0][0][0]}, ${coordinates[0][0][1]}]`);
+        }
       } catch (error) {
-        console.error('Ошибка при обработке координат полигона:', error);
-      }
-
-      console.log('Обработанные координаты:', coordinates);
-
-      // Если координат нет или они некорректны, пропускаем этот полигон
-      if (!coordinates || coordinates.length === 0) {
-        console.warn('Пропускаем полигон с ID:', polygon.id, '- нет координат');
+        console.error(`Ошибка при обработке координат полигона ${index}:`, error);
         return null;
       }
 
-      // Полигон должен иметь минимум 3 точки
-      if (coordinates.length < 3) {
-        console.warn('Пропускаем полигон с ID:', polygon.id, '- недостаточно точек:', coordinates.length);
+      // Проверка на валидность координат
+      if (!coordinates || coordinates.length === 0 || 
+          !coordinates[0] || coordinates[0].length < 3) {
+        console.warn(`Пропускаем полигон с ID: ${polygon.id} - недостаточно точек:`, 
+                     coordinates ? JSON.stringify(coordinates).substr(0, 100) : 'нет координат');
         return null;
       }
+
+      // Добавляем отладочную информацию о полученных координатах
+      console.log(`Полигон ${index} подготовлен для отображения, точек: ${coordinates[0].length}`);
+      console.log(`Пример точек: ${JSON.stringify(coordinates[0].slice(0, 2))}`);
 
       // Цвет в зависимости от типа культуры
       const getColor = () => {
@@ -388,27 +557,25 @@ const MobileMap = () => {
         }
       };
 
-      // Устанавливаем более заметный стиль для полигонов
+      // Устанавливаем стиль как на скриншоте - красные контуры полигонов
       return (
-        <Polygon 
-          key={polygon.id} 
-          positions={coordinates}
-          pathOptions={{ 
-            fillColor: getColor(),
-            weight: 3,
-            opacity: 1,
-            color: 'white',
-            fillOpacity: 0.8
-          }}
-        >
-          <Tooltip sticky>
-            <div>
-              <strong>{polygon.name || 'Без названия'}</strong><br/>
-              Культура: {polygon.field_type || 'Неизвестно'}<br/>
-              Площадь: {polygon.area ? polygon.area.toFixed(2) + ' га' : 'Не указана'}
-            </div>
-          </Tooltip>
-        </Polygon>
+        <React.Fragment key={`fragment-${polygon.id}`}>
+          <Polygon 
+            key={`polygon-${polygon.id}`} 
+            positions={coordinates}
+            pathOptions={{ 
+              fillColor: 'transparent',
+              weight: 1.5,
+              opacity: 1,
+              color: 'red',
+              fillOpacity: 0.05
+            }}
+          >
+            <Tooltip permanent direction="center" className="polygon-tooltip">
+              <span>{polygon.name || polygon.id}</span>
+            </Tooltip>
+          </Polygon>
+        </React.Fragment>
       );
     });
   };
@@ -531,6 +698,7 @@ const MobileMap = () => {
         className="mobile-map"
         zoomControl={false}
         attributionControl={false}
+        preferCanvas={true}
       >
         <TileLayer
           url={basemapsDict[basemap]}

@@ -1,5 +1,6 @@
 @echo off
-echo Запуск мобильного приложения на 192.168.1.110:3000
-set HOST=192.168.1.110
+echo Запуск мобильного приложения на локальной сети
+set HOST=localhost
 set PORT=3000
+echo Запуск приложения на %HOST%:%PORT%
 npm start 

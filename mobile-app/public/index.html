@@ -18,6 +18,7 @@
     
     <!-- iOS специфичные мета-теги -->
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="АгроМоб">
     
@@ -87,13 +88,54 @@
       // Регистрируем сервис-воркер для PWA
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
+          // Переменная для отслеживания перезагрузки страницы
+          let hasReloaded = sessionStorage.getItem('hasReloaded') === 'true';
+          
           navigator.serviceWorker.register('/service-worker.js')
             .then(function(registration) {
               console.log('ServiceWorker регистрация успешна:', registration.scope);
+              
+              // Обновление сервис-воркера при необходимости
+              registration.onupdatefound = function() {
+                const installingWorker = registration.installing;
+                if (installingWorker) {
+                  installingWorker.onstatechange = function() {
+                    if (installingWorker.state === 'installed') {
+                      if (navigator.serviceWorker.controller) {
+                        console.log('Новый контент доступен; обновление страницы...');
+                        // Перезагружаем страницу только один раз при обновлении сервис-воркера
+                        if (!hasReloaded) {
+                          sessionStorage.setItem('hasReloaded', 'true');
+                          // Отложенная перезагрузка, чтобы избежать петли
+                          setTimeout(function() {
+                            window.location.reload();
+                          }, 1000);
+                        }
+                      } else {
+                        console.log('Контент кэширован для использования в оффлайн режиме.');
+                        // Сбрасываем флаг перезагрузки, так как это первая установка
+                        sessionStorage.removeItem('hasReloaded');
+                      }
+                    }
+                  };
+                }
+              };
             })
             .catch(function(error) {
               console.log('Ошибка регистрации ServiceWorker:', error);
+              
+              // Обработка ошибки "chrome-extension" scheme unsupported
+              if (error.message && error.message.includes('scheme') && error.message.includes('unsupported')) {
+                console.log('Обнаружена ошибка со схемой URL. Это нормально при использовании расширений Chrome.');
+              }
             });
+            
+          // Обработчик сообщений от сервис-воркера
+          navigator.serviceWorker.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'API_CACHE_CLEARED') {
+              console.log('Кэш API был очищен в:', new Date(event.data.timestamp).toLocaleString());
+            }
+          });
         });
       }
     </script>

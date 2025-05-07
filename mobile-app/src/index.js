@@ -1,6 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './css/index.css';
+// Импортируем стили Leaflet
+import 'leaflet/dist/leaflet.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 // Импортируем сервис для отслеживания состояния сети

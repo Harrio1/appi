@@ -3,10 +3,9 @@ import L from 'leaflet';
 import { Map, TileLayer, Marker, Popup, ZoomControl, Polygon, Polyline, Tooltip } from "react-leaflet";
 import '../css/Map.css';
 import { connect } from "react-redux";
-import axios from 'axios';
 import * as turf from '@turf/turf'; // Импортируем turf
 import Sidebar from './Sidebar'; // Импортируем новый компонент
-import API_URL, { fetchData } from '../utils/apiConfig';
+import API_URL, { fetchData, apiClient } from '../utils/apiConfig';
 // указываем путь к файлам marker
 L.Icon.Default.imagePath = "https://unpkg.com/leaflet@1.5.0/dist/images/";
 
@@ -127,7 +126,7 @@ class MapComponent extends Component {
         }))
       });
 
-      const response = await axios.post(`${API_URL}/seasons`, {
+      const response = await apiClient.post('/api/seasons', {
         name: this.state.newSeasonName,
         seeds: this.state.polygons.map(polygon => ({
           id: polygon.id,
@@ -151,13 +150,48 @@ class MapComponent extends Component {
     }
   };
 
+  getSeasonFields = async (seasonId) => {
+    try {
+      console.log(`Запрос полей для сезона ${seasonId} по URL: ${API_URL}/api/seasons/${seasonId}/fields`);
+      
+      // Пробуем сначала через прямой URL
+      try {
+        const response = await apiClient.get(`/api/seasons/${seasonId}/fields`);
+        console.log('Успешный ответ от API:', response.data);
+        return response.data;
+      } catch (apiError) {
+        console.warn('Ошибка при использовании apiClient:', apiError);
+        
+        // Если не получилось через apiClient, пробуем прямой запрос через fetchData
+        console.log('Пробуем альтернативный метод...');
+        const fallbackResponse = await fetchData(`seasons/${seasonId}/fields`);
+        console.log('Успешный ответ через fetchData:', fallbackResponse.data);
+        return fallbackResponse.data;
+      }
+    } catch (error) {
+      console.error(`Ошибка при запросе полей для сезона ${seasonId}:`, error);
+      
+      if (error.response) {
+        console.error('Детали ошибки:', {
+          status: error.response.status,
+          headers: error.response.headers,
+          data: error.response.data
+        });
+      } else if (error.request) {
+        console.error('Нет ответа от сервера:', error.request);
+      }
+      
+      throw error;
+    }
+  };
+
   handleSeasonChange = async (event) => {
     const seasonId = event.target.value;
     console.log('Выбранный сезон ID:', seasonId);
 
     if (seasonId === '') {
         try {
-            const response = await axios.get(`${API_URL}/fields`);
+            const response = await fetchData('fields');
             const fieldsData = response.data;
 
             if (!fieldsData || !Array.isArray(fieldsData)) {
@@ -183,8 +217,8 @@ class MapComponent extends Component {
     }
 
     try {
-        const response = await axios.get(`${API_URL}/seasons/${seasonId}/fields`);
-        const fieldsData = response.data;
+        // Используем новый helper метод
+        const fieldsData = await this.getSeasonFields(seasonId);
         console.log('Данные полей для сезона:', fieldsData);
 
         if (!fieldsData || !Array.isArray(fieldsData)) {
@@ -192,7 +226,7 @@ class MapComponent extends Component {
         }
 
         // Получаем все поля, включая те, которые не были добавлены в сезон
-        const allFieldsResponse = await axios.get(`${API_URL}/fields`);
+        const allFieldsResponse = await fetchData('fields');
         const allFields = allFieldsResponse.data;
 
         const updatedPolygons = allFields.map(field => {
@@ -219,8 +253,8 @@ class MapComponent extends Component {
     if (!this.state.currentSeasonId) return;
 
     try {
-      const response = await axios.get(`${API_URL}/seasons/${this.state.currentSeasonId}/fields`);
-      const polygonsData = response.data;
+      // Используем наш новый helper метод вместо прямого axios запроса
+      const polygonsData = await this.getSeasonFields(this.state.currentSeasonId);
       console.log('Загруженные данные полигонов:', polygonsData);
       const polygons = polygonsData.map(polygon => ({
         id: polygon.id,
@@ -273,7 +307,7 @@ class MapComponent extends Component {
         const roundedArea = Math.round(area);
 
         try {
-            const response = await axios.post(`${API_URL}/fields`, {
+            const response = await apiClient.post('/api/fields', {
                 coordinates: coordinates,
                 name: newPolygonName,
                 area: roundedArea,
@@ -426,7 +460,7 @@ class MapComponent extends Component {
     }
 
     try {
-      const response = await axios.put(`${API_URL}/fields/${editFieldId}`, {
+      const response = await apiClient.put(`/api/fields/${editFieldId}`, {
         name: newFieldName,
         coordinates: newFieldCoordinates,
         area: parseFloat(newFieldArea)
@@ -450,17 +484,16 @@ class MapComponent extends Component {
   };
 
   handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    this.safeSetState({ [name]: value }, this.filterFields);
+    this.safeSetState({ filterText: e.target.value });
   };
 
   filterFields = () => {
-    const { fields, selectedSeasonId, selectedSeedId } = this.state;
-    const filteredFields = fields.filter(field => {
-      const binding = field.bindings.find(b => b.season_id === selectedSeasonId && b.seed_id === selectedSeedId);
-      return binding !== undefined;
-    });
-    this.safeSetState({ filteredFields });
+    const { filterText, fieldTypes } = this.state;
+    if (!filterText) return fieldTypes;
+    
+    return fieldTypes.filter(
+      type => type.toLowerCase().includes(filterText.toLowerCase())
+    );
   };
 
   getFilteredFields = () => {
@@ -470,7 +503,7 @@ class MapComponent extends Component {
 
   loadAllPolygons = async () => {
     try {
-      const response = await axios.get(`${API_URL}/fields`);
+      const response = await fetchData('fields');
       const polygonsData = response.data;
       console.log('Загруженные данные полигонов:', polygonsData);
 
@@ -537,7 +570,7 @@ class MapComponent extends Component {
       console.log('Попытка сохранения данных:', { selectedFieldId, selectedSeason, selectedFieldType });
 
       // Получаем все семена по названию культуры
-      const seedResponse = await axios.get(`${API_URL}/seeds?name=${selectedFieldType}`);
+      const seedResponse = await apiClient.get(`/api/seeds?name=${selectedFieldType}`);
       if (!seedResponse.data || seedResponse.data.length === 0) {
         throw new Error(`Культура "${selectedFieldType}" не найдена`);
       }
@@ -562,7 +595,8 @@ class MapComponent extends Component {
 
       console.log('Отправляемые данные:', dataToSend);
 
-      const response = await axios.post(`${API_URL}/fields/properties`, dataToSend);
+      // Use apiClient instead of direct axios
+      const response = await apiClient.post('/api/fields/properties', dataToSend);
       console.log('Ответ сервера:', response.data);
 
       if (response.data && response.data.success) {
@@ -578,12 +612,8 @@ class MapComponent extends Component {
       }
     } catch (error) {
       console.error('Ошибка при сохранении данных:', error);
-      if (error.response) {
-        console.error('Детали ошибки:', error.response.data);
-        alert(`Ошибка: ${error.response.data.error || error.response.data.message}`);
-      } else {
-        alert('Ошибка при сохранении данных: ' + error.message);
-      }
+      console.log('Детали ошибки:', error.response?.data || error.message);
+      alert('Ошибка при сохранении данных: ' + error.message);
     }
   };
 
@@ -600,7 +630,8 @@ class MapComponent extends Component {
     }
 
     try {
-      const response = await axios.post(`${API_URL}/fields/by-name`, { name: searchPolygonName });
+      // Use apiClient instead of direct axios
+      const response = await apiClient.post('/api/fields/by-name', { name: searchPolygonName });
       const polygonsData = response.data;
       console.log('Найденные полигоны:', polygonsData);
 
@@ -645,7 +676,8 @@ class MapComponent extends Component {
 
   handleSeasonCreated = async (newSeason) => {
     try {
-        const response = await axios.post(`${API_URL}/seasons`, {
+        // Use apiClient instead of direct axios
+        const response = await apiClient.post('/api/seasons', {
             name: newSeason.name
         });
 
@@ -668,7 +700,8 @@ class MapComponent extends Component {
 
   deleteField = async (fieldId) => {
     try {
-      await axios.delete(`${API_URL}/fields/${fieldId}`);
+      // Use apiClient instead of direct axios
+      await apiClient.delete(`/api/fields/${fieldId}`);
       this.safeSetState(prevState => ({
         fields: prevState.fields.filter(field => field.id !== fieldId)
       }));
@@ -700,11 +733,11 @@ class MapComponent extends Component {
   addNewFieldType = async (name, color) => {
     try {
         // Создаем семя
-        const seedResponse = await axios.post(`${API_URL}/seeds`, { name });
+        const seedResponse = await apiClient.post('/api/seeds', { name });
         const seedId = seedResponse.data.id;
 
         // Создаем цвет для семени
-        await axios.post(`${API_URL}/seed-colors`, { seed_id: seedId, color });
+        await apiClient.post('/api/seed-colors', { seed_id: seedId, color });
 
         console.log('Культура и цвет успешно созданы:', { name, color });
 
@@ -976,7 +1009,7 @@ class MapComponent extends Component {
             );
           })}
         </Map>
-        <div className="bottom-controls">
+        <div className="map-controls">
           <div className="season-selector">
             <select onChange={this.handleSeasonChange} value={this.state.currentSeasonId || ''}>
               <option value="">Выберите сезон</option>
@@ -985,6 +1018,48 @@ class MapComponent extends Component {
               ))}
             </select>
           </div>
+          
+          <div className="crop-controls">
+            <button 
+              onClick={this.toggleCropSelector}
+              className="crop-selector-button"
+              disabled={!this.state.currentSeasonId}
+            >
+              Поиск культур {this.state.selectedCrops.length > 0 ? `(${this.state.selectedCrops.length})` : ''}
+            </button>
+
+            {showCropSelector && (
+              <div className="crop-selector">
+                <input 
+                  type="text" 
+                  placeholder="Фильтр культур..." 
+                  className="crop-filter"
+                  value={this.state.filterText || ''}
+                  onChange={this.handleFilterChange}
+                />
+                {this.filterFields().map((type, index) => (
+                  <div key={index} className="crop-option">
+                    <input
+                      type="checkbox"
+                      id={`crop-${index}`}
+                      checked={selectedCrops.includes(type)}
+                      onChange={() => this.handleCropSelection(type)}
+                      disabled={!this.state.currentSeasonId}
+                    />
+                    <label htmlFor={`crop-${index}`}>
+                      {type}
+                      <span 
+                        className="crop-color-indicator"
+                        style={{ backgroundColor: this.state.fieldColors[type] || 'red' }}
+                      />
+                    </label>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="bottom-controls">
           <div className="basemap-selector">
             <button onClick={() => this.safeSetState({ basemap: 'osm' })}>OSM</button>
             <button onClick={() => this.safeSetState({ basemap: 'hot' })}>HOT</button>
@@ -992,45 +1067,6 @@ class MapComponent extends Component {
             <button onClick={() => this.safeSetState({ basemap: 'mapbox' })}>MAPBOX</button>
           </div>
         </div>
-        <div className="crop-controls">
-          <button 
-            onClick={this.toggleCropSelector}
-            className="crop-selector-button"
-            disabled={!this.state.currentSeasonId}
-          >
-            Поиск культур {this.state.selectedCrops.length > 0 ? `(${this.state.selectedCrops.length})` : ''}
-          </button>
-
-          {showCropSelector && (
-            <div className="crop-selector">
-              {fieldTypes.map((type, index) => (
-                <div key={index} className="crop-option">
-                  <input
-                    type="checkbox"
-                    id={`crop-${index}`}
-                    checked={selectedCrops.includes(type)}
-                    onChange={() => this.handleCropSelection(type)}
-                    disabled={!this.state.currentSeasonId}
-                  />
-                  <label htmlFor={`crop-${index}`}>
-                    {type}
-                    <span 
-                      className="crop-color-indicator"
-                      style={{ backgroundColor: this.state.fieldColors[type] || 'red' }}
-                    />
-                  </label>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        <select onChange={this.handleFieldTypeSelection}>
-          {fieldTypes.map((type, index) => (
-            <option key={index} value={type}>
-              {type} ({this.state.fieldColors[type] || 'red'})
-            </option>
-          ))}
-        </select>
       </div>
     );
   }

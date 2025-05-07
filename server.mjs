@@ -7,25 +7,44 @@ dotenv.config();
 
 const app = express();
 
-// Разрешаем запросы с любого источника (или укажите конкретный домен)
-app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3003', 'http://192.168.1.110:3000'], // Явно разрешаем запросы с IP-адреса
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}));
-app.use(express.json());
-
-// Добавляем логирование для отладки
+// Log requests for debugging
 app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-    res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.header('Pragma', 'no-cache');
-    res.header('Expires', '0');
-    next();
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  console.log(`  Origin: ${req.headers.origin || 'No origin'}`);
+  next();
 });
 
-// Получаем аргументы командной строки
+// Configure CORS using the cors package
+const corsOptions = {
+  origin: [
+    'http://localhost:3001',    // Local development
+    'http://localhost:3000',    // Local development alternative port
+    'http://192.168.1.110:3000' // IP-based access (fixed space issue)
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'Cache-Control'],
+  maxAge: 86400  // Cache preflight for 24 hours
+};
+
+// Apply CORS middleware with options
+app.use(cors(corsOptions));
+
+// Handle OPTIONS requests explicitly
+app.options('*', cors(corsOptions));
+
+// Parse JSON bodies
+app.use(express.json());
+
+// Cache control middleware
+app.use((req, res, next) => {
+  res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.header('Pragma', 'no-cache');
+  res.header('Expires', '0');
+  next();
+});
+
+// Get command line arguments
 const args = process.argv.slice(2);
 const host = args.includes('--host') ? args[args.indexOf('--host') + 1] : 'LOCALHOST';
 const port = args.includes('--port') ? parseInt(args[args.indexOf('--port') + 1]) : 8000;
@@ -44,11 +63,21 @@ const db = mysql.createPool({
     queueLimit: 0
 });
 
+// Добавляем обработчики для запросов и без префикса /api
+// Это позволит серверу отвечать как на /api/health, так и на /health
+
+// Основной эндпоинт
 app.get('/', (req, res) => {
   res.send('Сервер запущен!');
 });
 
-app.get('/api/fields', async (req, res) => {
+// Эндпоинт для проверки здоровья - доступен как /api/health, так и /health
+app.get(['/api/health', '/health'], (req, res) => {
+  res.status(200).json({ status: 'ok', message: 'API сервер работает' });
+});
+
+// Дублируем маршруты для обоих вариантов URL
+app.get(['/api/fields', '/fields'], async (req, res) => {
     try {
         console.log('Попытка подключения к базе данных...');
         const [fields] = await db.query('SELECT * FROM fields');
@@ -60,7 +89,7 @@ app.get('/api/fields', async (req, res) => {
     }
 });
 
-app.get('/api/seasons', async (req, res) => {
+app.get(['/api/seasons', '/seasons'], async (req, res) => {
   try {
     const [seasons] = await db.query('SELECT * FROM seasons');
     res.status(200).json(seasons);
@@ -70,7 +99,7 @@ app.get('/api/seasons', async (req, res) => {
   }
 });
 
-app.get('/api/seeds', async (req, res) => {
+app.get(['/api/seeds', '/seeds'], async (req, res) => {
   try {
     const [seeds] = await db.query('SELECT seeds.*, seed_colors.color FROM seeds LEFT JOIN seed_colors ON seeds.id = seed_colors.seed_id');
     res.json(seeds);
@@ -80,7 +109,8 @@ app.get('/api/seeds', async (req, res) => {
   }
 });
 
-app.get('/api/seasons/:season/fields', async (req, res) => {
+// Добавляем маршрут для получения полей по сезону (с и без префикса /api)
+app.get(['/api/seasons/:season/fields', '/seasons/:season/fields'], async (req, res) => {
     try {
         const seasonId = req.params.season;
         console.log('Запрос на получение полей для сезона:', seasonId);
@@ -288,6 +318,6 @@ process.on('unhandledRejection', (err) => {
 app.listen(port, '0.0.0.0', () => {
   console.log(`Сервер запущен на http://${host}:${port}`);
   console.log(`Также доступен на http://0.0.0.0:${port}`);
-  console.log(`IP интерфейсы: 192.168.1.110:${port}`);
+  console.log(`IP интерфейсы:  192.168.1.110:${port}`);
 });
 

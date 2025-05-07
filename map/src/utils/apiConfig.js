@@ -8,29 +8,29 @@
 import axios from 'axios';
 
 // Получаем порт API сервера из переменных окружения
-// Принудительно устанавливаем порт 3003
-const apiPort = '3003';
+// Используем порт 8000 для API-сервера
+const apiPort = process.env.REACT_APP_API_PORT || '8000';
 const mobileMode = process.env.REACT_APP_MOBILE_MODE === 'true';
 
 // Определение хоста для API запросов
-let apiHost = 'LOCALHOST';
-if (process.env.REACT_APP_API_HOST) {
-  // Если хост явно указан в переменных окружения, используем его
-  apiHost = process.env.REACT_APP_API_HOST;
-} else {
-  // Иначе используем текущий хост приложения
+let apiHost = '127.0.0.1'; // Фиксированный IPv4 адрес
+if (mobileMode) {
+  // В мобильном режиме используем IP устройства
   apiHost = window.location.hostname;
 }
 
 // Формирование базового URL для API без завершающего слеша
 let baseUrl;
 
-// В production используем относительные пути
-if (process.env.NODE_ENV === 'production') {
+// В development используем прокси через относительные пути
+if (process.env.NODE_ENV === 'development') {
+  // Для разработки используем относительные пути для работы через прокси
   baseUrl = '/api';
+  console.log('[apiConfig] Используем относительный путь /api для прокси');
 } else {
-  // Для разработки используем полный URL без завершающего слеша
+  // Для production используем полный URL
   baseUrl = `http://${apiHost}:${apiPort}/api`;
+  console.log('[apiConfig] Используем полный URL для production');
 }
 
 console.log('[apiConfig] Режим API:', mobileMode ? 'Мобильный' : 'Десктоп');
@@ -47,8 +47,10 @@ const apiClient = axios.create({
   timeout: 5000,
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
     'Cache-Control': 'no-cache'
-  }
+  },
+  withCredentials: true // Для поддержки CORS с credentials
 });
 
 // Функция для объединения путей без двойных слешей
@@ -67,10 +69,16 @@ apiClient.interceptors.request.use(
   (config) => {
     // Правильное формирование URL
     if (config.url) {
+      // Убираем начальный слеш из URL для предотвращения дублирования
+      if (config.url.startsWith('/')) {
+        config.url = config.url.slice(1);
+      }
+      
+      // Убираем двойные слеши
       config.url = config.url.replace(/\/+/g, '/');
     }
     
-    console.log(`[apiConfig] Запрос к ${config.url}`, config);
+    console.log(`[apiConfig] Запрос к ${config.method.toUpperCase()} ${config.baseURL}/${config.url}`);
     return config;
   },
   (error) => {
@@ -82,12 +90,8 @@ apiClient.interceptors.request.use(
 // Проверка соединения с сервером
 const checkApiConnection = async () => {
   try {
-    // Формируем URL без двойных слешей
-    const healthUrl = joinPaths(API_URL, 'health');
-    console.log('[apiConfig] Проверка API здоровья:', healthUrl);
-    
-    // Используем прямой вызов axios
-    const response = await axios.get(healthUrl);
+    // Используем apiClient для проверки здоровья
+    const response = await apiClient.get('health');
     console.log('[apiConfig] API здоровье:', response.data);
     
     return response.status === 200;
@@ -100,15 +104,16 @@ const checkApiConnection = async () => {
 // Отложенная проверка соединения
 setTimeout(checkApiConnection, 1000);
 
-// Экспортируем функцию для получения данных напрямую из базы данных
+// Экспортируем функцию для получения данных
 export const fetchData = async (endpoint) => {
   try {
-    // Формируем URL без двойных слешей
-    const url = joinPaths(API_URL, endpoint);
-    console.log(`[apiConfig] Запрос данных:`, url);
+    // Удаляем начальный слеш, если он есть
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
     
-    // Выполняем запрос напрямую через axios
-    const response = await axios.get(url);
+    console.log(`[apiConfig] Запрос GET данных:`, cleanEndpoint);
+    
+    // Используем наш apiClient для запросов
+    const response = await apiClient.get(cleanEndpoint);
     return response;
   } catch (error) {
     console.error(`[apiConfig] Ошибка при запросе ${endpoint}:`, error.message);

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Отладка данных полей</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        #map {
+            height: 500px;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 8px 16px;
+            margin-right: 10px;
+        }
+        textarea {
+            width: 100%;
+            height: 300px;
+            font-family: monospace;
+            margin-top: 10px;
+        }
+        .field-info {
+            font-size: 14px;
+            margin-bottom: 10px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>Отладка данных полей</h1>
+    
+    <div class="controls">
+        <button id="loadBtn">Загрузить поля</button>
+        <button id="renderBtn">Отобразить на карте</button>
+        <button id="clearBtn">Очистить карту</button>
+        <span id="status">Готов к работе</span>
+    </div>
+    
+    <div id="map"></div>
+    
+    <div class="field-info" id="fieldInfo"></div>
+    
+    <h3>Данные полей (JSON):</h3>
+    <textarea id="jsonData" placeholder="JSON данные полей"></textarea>
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Инициализация карты
+        const map = L.map('map').setView([46.3, 41.9], 10);
+        L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>'
+        }).addTo(map);
+        
+        // Переменные для хранения слоев
+        let fieldLayers = [];
+        
+        // Элементы управления
+        const loadBtn = document.getElementById('loadBtn');
+        const renderBtn = document.getElementById('renderBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const jsonData = document.getElementById('jsonData');
+        const statusEl = document.getElementById('status');
+        const fieldInfo = document.getElementById('fieldInfo');
+        
+        // Загрузка полей с API
+        loadBtn.addEventListener('click', async () => {
+            try {
+                statusEl.textContent = 'Загрузка данных...';
+                // Получаем данные с API из основного приложения
+                const response = await fetch('/api/fields');
+                if (!response.ok) {
+                    throw new Error(`Ошибка HTTP: ${response.status}`);
+                }
+                const data = await response.json();
+                jsonData.value = JSON.stringify(data, null, 2);
+                
+                // Выводим информацию о полях
+                displayFieldsInfo(data);
+                
+                statusEl.textContent = `Загружено ${data.length} полей`;
+            } catch (error) {
+                console.error('Ошибка загрузки полей:', error);
+                statusEl.textContent = `Ошибка: ${error.message}`;
+            }
+        });
+        
+        // Отображение полей на карте
+        renderBtn.addEventListener('click', () => {
+            try {
+                clearMap();
+                statusEl.textContent = 'Обработка данных...';
+                
+                // Парсим JSON данные
+                let data;
+                try {
+                    data = JSON.parse(jsonData.value);
+                } catch (e) {
+                    throw new Error(`Ошибка парсинга JSON: ${e.message}`);
+                }
+                
+                if (!Array.isArray(data)) {
+                    throw new Error('Данные не являются массивом');
+                }
+                
+                // Отображаем поля на карте
+                renderFields(data);
+                
+                statusEl.textContent = `Отображено ${data.length} полей`;
+            } catch (error) {
+                console.error('Ошибка отображения полей:', error);
+                statusEl.textContent = `Ошибка: ${error.message}`;
+            }
+        });
+        
+        // Очистка карты
+        clearBtn.addEventListener('click', () => {
+            clearMap();
+            statusEl.textContent = 'Карта очищена';
+        });
+        
+        // Отображение информации о полях
+        function displayFieldsInfo(fields) {
+            if (!Array.isArray(fields) || fields.length === 0) {
+                fieldInfo.textContent = 'Нет данных полей';
+                return;
+            }
+            
+            const info = [];
+            info.push(`Всего полей: ${fields.length}`);
+            
+            // Статистика форматов координат
+            let formatsCount = {};
+            let fieldsWithCoords = 0;
+            
+            fields.forEach(field => {
+                if (field.coordinates) {
+                    fieldsWithCoords++;
+                    let format = getCoordinateFormat(field.coordinates);
+                    formatsCount[format] = (formatsCount[format] || 0) + 1;
+                }
+            });
+            
+            info.push(`Полей с координатами: ${fieldsWithCoords}`);
+            info.push('Форматы координат:');
+            for (const format in formatsCount) {
+                info.push(`  - ${format}: ${formatsCount[format]} полей`);
+            }
+            
+            // Пример первого поля
+            if (fields.length > 0) {
+                info.push('\nПример первого поля:');
+                const field = fields[0];
+                for (const key in field) {
+                    if (key === 'coordinates') {
+                        info.push(`  ${key}: ${getCoordinateFormat(field[key])}, ${JSON.stringify(field[key]).substring(0, 100)}...`);
+                    } else {
+                        info.push(`  ${key}: ${JSON.stringify(field[key])}`);
+                    }
+                }
+            }
+            
+            fieldInfo.textContent = info.join('\n');
+        }
+        
+        // Определение формата координат
+        function getCoordinateFormat(coords) {
+            if (typeof coords === 'string') {
+                return 'string';
+            }
+            
+            if (Array.isArray(coords)) {
+                if (coords.length === 0) {
+                    return 'empty_array';
+                }
+                
+                if (typeof coords[0] === 'number') {
+                    return 'flat_array_of_numbers';
+                }
+                
+                if (Array.isArray(coords[0])) {
+                    if (coords[0].length === 2 && typeof coords[0][0] === 'number') {
+                        return 'array_of_points';
+                    }
+                    
+                    if (Array.isArray(coords[0][0])) {
+                        return 'nested_arrays';
+                    }
+                }
+                
+                return 'unknown_array';
+            }
+            
+            if (typeof coords === 'object') {
+                if (coords.coordinates && Array.isArray(coords.coordinates)) {
+                    return 'object_with_coordinates';
+                }
+                
+                if (coords.type === 'Polygon' || coords.type === 'MultiPolygon') {
+                    return 'geojson';
+                }
+                
+                if (coords.type === 'Feature') {
+                    return 'geojson_feature';
+                }
+            }
+            
+            return 'unknown';
+        }
+        
+        // Отображение полей на карте
+        function renderFields(fields) {
+            fields.forEach((field, index) => {
+                try {
+                    // Пропускаем поля без координат
+                    if (!field.coordinates) {
+                        console.warn(`Поле ${index} не имеет координат`);
+                        return;
+                    }
+                    
+                    // Обработка координат в разных форматах
+                    let processedCoords = processCoordinates(field.coordinates);
+                    
+                    if (!processedCoords || processedCoords.length === 0 || 
+                        !processedCoords[0] || processedCoords[0].length < 3) {
+                        console.warn(`Поле ${index} имеет недостаточно точек`);
+                        return;
+                    }
+                    
+                    // Создаем полигон и добавляем на карту
+                    const polygon = L.polygon(processedCoords, {
+                        fillColor: 'red',
+                        weight: 3,
+                        opacity: 1,
+                        color: 'white',
+                        fillOpacity: 0.7
+                    }).addTo(map);
+                    
+                    // Добавляем всплывающую подсказку
+                    polygon.bindTooltip(`ID: ${field.id || 'Н/Д'}<br>Название: ${field.name || 'Без названия'}`);
+                    
+                    // Сохраняем слой для возможности очистки
+                    fieldLayers.push(polygon);
+                } catch (error) {
+                    console.error(`Ошибка при отображении поля ${index}:`, error);
+                }
+            });
+            
+            // Масштабируем карту, чтобы видеть все поля
+            if (fieldLayers.length > 0) {
+                const group = L.featureGroup(fieldLayers);
+                map.fitBounds(group.getBounds());
+            }
+        }
+        
+        // Обработка координат в разных форматах
+        function processCoordinates(coords) {
+            // Преобразуем строку в объект, если нужно
+            if (typeof coords === 'string') {
+                try {
+                    coords = JSON.parse(coords);
+                } catch (e) {
+                    console.error('Ошибка парсинга JSON координат:', e);
+                    return null;
+                }
+            }
+            
+            // Массив точек [[lat, lon], [lat, lon], ...]
+            if (Array.isArray(coords) && Array.isArray(coords[0]) && coords[0].length === 2 && 
+                typeof coords[0][0] === 'number' && typeof coords[0][1] === 'number') {
+                return [coords];
+            }
+            
+            // Вложенный массив [[[lat, lon], [lat, lon], ...]]
+            if (Array.isArray(coords) && Array.isArray(coords[0]) && 
+                Array.isArray(coords[0][0]) && coords[0][0].length === 2) {
+                return coords;
+            }
+            
+            // GeoJSON Polygon
+            if (coords.type === 'Polygon' && Array.isArray(coords.coordinates)) {
+                // Преобразуем [lon, lat] в [lat, lon]
+                return coords.coordinates.map(ring => 
+                    ring.map(coord => [coord[1], coord[0]])
+                );
+            }
+            
+            // GeoJSON в объекте Feature
+            if (coords.type === 'Feature' && coords.geometry && 
+                coords.geometry.type === 'Polygon' && Array.isArray(coords.geometry.coordinates)) {
+                return coords.geometry.coordinates.map(ring => 
+                    ring.map(coord => [coord[1], coord[0]])
+                );
+            }
+            
+            // Формат с coordinates в объекте
+            if (coords.coordinates && Array.isArray(coords.coordinates)) {
+                // Если это массив точек
+                if (Array.isArray(coords.coordinates[0]) && coords.coordinates[0].length === 2 && 
+                    typeof coords.coordinates[0][0] === 'number') {
+                    return [coords.coordinates];
+                }
+                
+                // Если это массив колец
+                if (Array.isArray(coords.coordinates[0]) && Array.isArray(coords.coordinates[0][0])) {
+                    // Проверяем, нужно ли менять [lon, lat] на [lat, lon]
+                    const firstPoint = coords.coordinates[0][0];
+                    // Если координаты похожи на [lon, lat], меняем их местами
+                    if (Math.abs(firstPoint[0]) > 90) {
+                        return coords.coordinates.map(ring => 
+                            ring.map(coord => [coord[1], coord[0]])
+                        );
+                    }
+                    return coords.coordinates;
+                }
+            }
+            
+            // Плоский массив [lat, lon, lat, lon, ...]
+            if (Array.isArray(coords) && coords.length >= 4 && typeof coords[0] === 'number') {
+                const ring = [];
+                for (let i = 0; i < coords.length; i += 2) {
+                    if (i + 1 < coords.length) {
+                        ring.push([coords[i], coords[i+1]]);
+                    }
+                }
+                return [ring];
+            }
+            
+            console.warn('Неизвестный формат координат:', coords);
+            return null;
+        }
+        
+        // Очистка карты
+        function clearMap() {
+            fieldLayers.forEach(layer => map.removeLayer(layer));
+            fieldLayers = [];
+        }
+    </script>
+</body>
+</html> 

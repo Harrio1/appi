@@ -81,3 +81,239 @@ npm run build
 - npm 6.x или выше
 - Поддержка геолокации в браузере
 - Современный мобильный браузер (Chrome, Safari, Firefox) 
+
+## Устранение неполадок
+
+### Проблемы с соединением API
+
+Если приложение показывает ошибки вида "ERR_CONNECTION_REFUSED" или "Network Error":
+
+1. Убедитесь, что API сервер запущен на порту 8000
+   - Проверьте команду `curl http://localhost:8000/api/fields` или откройте в браузере
+   - Если нет ответа, запустите API сервер
+
+2. Проверьте настройки прокси в файле `src/setupProxy.js`
+   - Настройки должны указывать на правильный хост и порт API
+   - По умолчанию `http://localhost:8000`
+
+3. Для использования в локальной сети: 
+   - Замените `localhost` на ваш IP-адрес в `setupProxy.js`
+   - Например, `http://192.168.1.100:8000`
+
+### Проблемы с иконками PWA
+
+Если есть ошибки в консоли о недоступности logo192.png или logo512.png:
+
+1. Убедитесь что файлы иконок существуют в директории `/public`:
+   - logo192.png (192x192 пикселей)
+   - logo512.png (512x512 пикселей)
+
+2. При отсутствии создайте простые иконки в любом графическом редакторе
+
+### Проблемы с мобильной версией
+
+Если приложение не работает как PWA на мобильных устройствах:
+
+1. Проверьте наличие в `index.html` следующих мета-тегов:
+   ```html
+   <meta name="apple-mobile-web-app-capable" content="yes">
+   <meta name="mobile-web-app-capable" content="yes">
+   ```
+
+2. Проверьте правильность файла `manifest.json` 
+
+### Проблемы с отображением полей на карте
+
+Если поля не отображаются на карте, несмотря на успешную загрузку данных:
+
+1. Проверьте консоль браузера на наличие ошибок в формате координат:
+   - Откройте инструменты разработчика в браузере (F12)
+   - Перейдите на вкладку "Console"
+   - Найдите ошибки, связанные с обработкой координат
+
+2. Убедитесь в правильном формате координат:
+   - Координаты должны быть массивом точек в GeoJSON-совместимом формате
+   - Порядок координат должен быть [долгота, широта] для GeoJSON или [широта, долгота] для Leaflet
+   - Для отображения полигона нужно минимум 3 точки
+
+3. Проверьте настройки центра карты:
+   - Координаты центра карты (lat, lng) в компоненте MobileMap должны быть близки к координатам ваших полей
+   - Измените начальное значение zoom в MobileMap.jsx, если поля не видны
+   - Текущие координаты: lat: 46.692874, lng: 41.0487245, zoom: 12
+
+4. Проверьте вкладку Network в DevTools:
+   - В браузере откройте вкладку Network (Сеть)
+   - Найдите запросы к API endpoints (seasons, fields, seeds)
+   - Проверьте формат полученных данных, особенно структуру coordinates
+   - Убедитесь, что координаты в ответе API имеют правильный формат
+
+5. Проблемы с форматом координат API:
+   - Если API возвращает координаты в формате `{coordinates: [[lat, lon], [lat, lon], ...]}`, это обрабатывается правильно
+   - Если координаты в формате GeoJSON `[[lon, lat], [lon, lat], ...]` - приложение должно преобразовать их
+   - При нестандартном формате координат требуется адаптация renderPolygons() в MobileMap.jsx
+
+6. Перезагрузите приложение после исправлений:
+   - Очистите кэш браузера
+   - Перезапустите приложение
+
+### Проблемы с Service Worker
+
+Если в консоли браузера появляется ошибка с сервис-воркером:
+
+1. Ошибка `Uncaught (in promise) TypeError: Failed to execute 'put' on 'Cache': Request scheme 'chrome-extension' is unsupported`:
+   - Это происходит, когда сервис-воркер пытается кэшировать URL с несовместимой схемой (например, chrome-extension://)
+   - Ошибка не критична и часто возникает из-за браузерных расширений
+   - Исправление внедрено в текущую версию сервис-воркера, который теперь фильтрует URL'ы
+
+2. Бесконечная перезагрузка страницы при обновлении сервис-воркера:
+   - Если страница постоянно перезагружается, откройте вкладку Chrome DevTools → Application → Service Workers
+   - Нажмите "Unregister" для удаления текущего сервис-воркера
+   - Очистите кэш браузера: Chrome DevTools → Application → Clear Storage → "Clear site data"
+   - Обновите страницу после очистки
+   - Данная проблема исправлена в текущей версии, используя механизм отслеживания перезагрузок
+
+3. Если сервис-воркер не регистрируется:
+   - Проверьте, что файл `service-worker.js` доступен в корне сайта
+   - Убедитесь, что вы открываете приложение по протоколу HTTP/HTTPS, а не file://
+   - В Chrome откройте вкладку Application → Service Workers и проверьте статус
+
+4. Офлайн-режим не работает:
+   - Проверьте, зарегистрирован ли сервис-воркер (Application → Service Workers)
+   - Убедитесь, что в кэше есть сохраненные данные (Application → Cache → Cache Storage)
+   - Перезагрузите приложение и попробуйте переключиться в офлайн-режим через приложение
+
+5. Для полной перезагрузки сервис-воркера:
+   - Откройте Chrome DevTools → Application → Service Workers
+   - Нажмите "Unregister" для текущего сервис-воркера
+   - Перезагрузите страницу 
+
+### Проблема с кэшем Service Worker
+
+Если вы видите ошибку `Failed to execute 'put' on 'Cache': Request scheme 'chrome-extension' is unsupported`, это связано с тем, что Service Worker пытается кэшировать ресурсы из нестандартных URL-схем, таких как chrome-extension. Решения:
+
+1. Добавьте фильтрацию URL-схем в service-worker.js:
+```js
+// Проверка, что URL использует поддерживаемую схему (http/https)
+function isSupportedScheme(url) {
+  const supportedSchemes = ['http:', 'https:'];
+  try {
+    const urlObj = new URL(url);
+    return supportedSchemes.includes(urlObj.protocol);
+  } catch {
+    return false;
+  }
+}
+
+// Затем используйте эту функцию при кэшировании
+self.addEventListener('fetch', (event) => {
+  if (!isSupportedScheme(event.request.url)) {
+    console.log('Пропуск кэширования для URL с неподдерживаемой схемой:', event.request.url);
+    return;
+  }
+  
+  // Остальной код обработчика fetch...
+});
+```
+
+2. Полностью отключите Service Worker:
+   - Откройте DevTools (F12)
+   - Перейдите на вкладку Application -> Service Workers
+   - Отключите все Service Workers для сайта
+
+### Проблема с циклической перезагрузкой страницы
+
+Если после обновления приложение постоянно перезагружается, это может быть связано с логикой обновления в service-worker.js. Решения:
+
+1. Добавьте отслеживание количества перезагрузок:
+```js
+// В service-worker.js
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
+// В index.html или основном JS-файле
+if ('serviceWorker' in navigator) {
+  // Проверяем, была ли уже перезагрузка
+  const reloadCount = sessionStorage.getItem('reloadCount') || 0;
+  
+  // Если было больше одной перезагрузки, прекращаем цикл
+  if (reloadCount > 1) {
+    console.warn('Обнаружена циклическая перезагрузка. Останавливаем.');
+    sessionStorage.removeItem('reloadCount');
+  } else {
+    // Увеличиваем счетчик
+    sessionStorage.setItem('reloadCount', parseInt(reloadCount) + 1);
+    
+    // Регистрируем service worker и обрабатываем обновление
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(registration => {
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // Новый service worker доступен, обновляем страницу
+              window.location.reload();
+            }
+          });
+        });
+      });
+  }
+}
+```
+
+2. Временное отключение Service Worker для отладки:
+```js
+// Во время разработки можно отключить регистрацию
+if (process.env.NODE_ENV !== 'production' && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+    for(let registration of registrations) {
+      registration.unregister();
+    }
+  });
+}
+```
+
+### Проблема с отображением полей на карте
+
+Если поля загружаются из API, но не отображаются на карте, проблема может быть связана с форматами данных координат. Решения:
+
+1. Проверьте форматы координат в консоли разработчика:
+   - Обычно ожидается формат [[lat, lon], [lat, lon], ...] для полигонов
+   - Для GeoJSON формат обычно [[lon, lat], [lon, lat], ...] и требует конвертации
+
+2. Улучшен алгоритм обработки различных форматов координат в компоненте MobileMap:
+   ```js
+   // Пример обработки координат в MobileMap.jsx
+   if (Array.isArray(coords) && Array.isArray(coords[0]) && coords[0].length === 2) {
+     // Формат [[lat, lon], [lat, lon], ...] - прямое использование
+     coordinates = [coords];
+   } else if (coords.coordinates && Array.isArray(coords.coordinates)) {
+     // Формат {coordinates: [[lat, lon], ...]} - извлечение coordinates
+     coordinates = [coords.coordinates];
+   } else if (coords.type === 'Polygon' && Array.isArray(coords.coordinates)) {
+     // Формат GeoJSON - конвертация [lon, lat] -> [lat, lon]
+     coordinates = coords.coordinates.map(ring => 
+       ring.map(coord => [coord[1], coord[0]])
+     );
+   }
+   ```
+
+3. Добавьте отладочный HTML-файл для тестирования форматов:
+   - Используйте `/debug.html` для загрузки и отображения полей
+   - Этот инструмент поможет определить правильные форматы координат
+
+4. Проверьте обработку координат в apiService.js:
+   - Функция formatFieldsData должна обрабатывать различные форматы данных API
+   - Убедитесь, что координаты извлекаются из правильных свойств объекта
+
+5. Обновите центр карты и масштаб для отображения всех полей:
+   ```js
+   // В MobileMap.jsx
+   const [lat, setLat] = useState(46.3);  // Примерное расположение полей
+   const [lng, setLng] = useState(41.9);  // со скриншота
+   const [zoom, setZoom] = useState(10);  // Меньший масштаб для обзора всех полей
+   ```
+
+Если ни одно из решений не помогает, проверьте формат данных в ответе API с помощью Network-вкладки DevTools и сравните его с ожидаемым форматом для отображения. 

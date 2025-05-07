@@ -74,7 +74,8 @@
     "webpack": "^5.64.4",
     "webpack-dev-server": "^4.6.0",
     "webpack-manifest-plugin": "^4.0.2",
-    "workbox-webpack-plugin": "^6.4.1"
+    "workbox-webpack-plugin": "^6.4.1",
+    "body-parser": "^1.20.2"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -104,10 +105,9 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "http://LOCALHOST:8000",
   "devDependencies": {
     "cross-env": "^7.0.3",
-    "http-proxy-middleware": "^3.0.5",
+    "http-proxy-middleware": "^2.0.6",
     "webpack": "^5.64.4",
     "webpack-dev-server": "^4.5.0"
   },
