@@ -28,28 +28,6 @@ async function testApiClientPost() {
     }
   );
   
-  // Тестовые POST запросы
-  const testCases = [
-    {
-      name: 'Создание сезона',
-      endpoint: '/seasons',
-      data: { name: 'Тестовый сезон с прокси' }
-    },
-    {
-      name: 'Создание поля',
-      endpoint: '/fields',
-      data: {
-        name: 'Тестовое поле с прокси',
-        coordinates: [[55.123, 37.456], [55.124, 37.456], [55.124, 37.457], [55.123, 37.457], [55.123, 37.456]],
-        area: 100
-      }
-    },
-    {
-      name: 'Создание семени',
-      endpoint: '/seeds',
-      data: { name: 'Тестовая культура с прокси' }
-    }
-  ];
   
   // Проверка соединения
   try {

@@ -11,10 +11,23 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3003;
 
-// Включаем CORS для всех запросов
-app.use(cors());
+// Make sure CORS is properly applied before any routes
+// Fix CORS issues by allowing all origins
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  res.header("Access-Control-Allow-Credentials", "true");
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+});
 
-// Парсим JSON в теле запроса
+// Parse JSON in request body
 app.use(express.json());
 
 // Настраиваем прокси для API (изменено - API теперь обслуживается на том же порту)
@@ -23,7 +36,7 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
-// API endpoint для проверки работоспособности
+// API health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'API сервер работает' });
 });
@@ -203,9 +216,16 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
-// Запускаем сервер
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Сервер запущен на http://LOCALHOST:${PORT}`);
-  console.log(`API доступно на http://LOCALHOST:${PORT}/api`);
-  console.log(`Проверка API: http://LOCALHOST:${PORT}/api/health`);
-}); 
+// Запускаем сервер на порту 3003 для основного проекта
+const server = app.listen(PORT, 'localhost', () => {
+  console.log(`Сервер запущен на http://localhost:${PORT}`);
+  console.log(`API доступно на http://localhost:${PORT}/api`);
+  console.log(`Проверка API: http://localhost:${PORT}/api/health`);
+});
+
+server.on('listening', () => {
+  const addr = server.address();
+  console.log(`Основной сервер прослушивает порт ${addr.port} на интерфейсе ${addr.address}`);
+});
+
+// Примечание: мобильный API теперь в отдельном файле mobile-server.js 

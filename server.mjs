@@ -16,12 +16,7 @@ app.use((req, res, next) => {
 
 // Configure CORS using the cors package
 const corsOptions = {
-  origin: [
-    'http://localhost:3001',    // Local development
-    'http://localhost:3000',    // Local development alternative port
-    'http://192.168.1.110:3000' // IP-based access (fixed space issue)
-  ],
-  credentials: true,
+  origin: '*', // Разрешить запросы с любого источника
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'Cache-Control'],
   maxAge: 86400  // Cache preflight for 24 hours
@@ -318,6 +313,6 @@ process.on('unhandledRejection', (err) => {
 app.listen(port, '0.0.0.0', () => {
   console.log(`Сервер запущен на http://${host}:${port}`);
   console.log(`Также доступен на http://0.0.0.0:${port}`);
-  console.log(`IP интерфейсы:  192.168.1.110:${port}`);
+  console.log(`IP интерфейсы:  192.168.1.103:${port}`);
 });
 

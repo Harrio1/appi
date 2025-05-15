@@ -5,7 +5,7 @@ const testMobileCorsConnection = async () => {
   console.log('===== ТЕСТИРОВАНИЕ CORS ДЛЯ МОБИЛЬНОГО ПРИЛОЖЕНИЯ =====\n');
   
   // IP сервера
-  const serverIP = ' 192.168.1.110';
+  const serverIP = ' 192.168.1.103';
   const apiPort = 8000;
   
   // Проверяем несколько эндпоинтов

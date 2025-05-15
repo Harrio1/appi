@@ -78,17 +78,17 @@
     "body-parser": "^1.20.2"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "cross-env HOST=192.168.58.253 PORT=3000 react-scripts start",
     "build": "node scripts/build.js",
     "test": "node scripts/test.js",
     "serve": "serve -s build -p 3003",
     "server": "node server.js",
     "clean": "rimraf dist && rimraf .cache",
-    "dev": "cross-env DANGEROUSLY_DISABLE_HOST_CHECK=true PORT=3003 react-scripts start",
+    "dev": "cross-env DANGEROUSLY_DISABLE_HOST_CHECK=true HOST=localhost PORT=3003 react-scripts start",
     "install-all": "npm install && cd ../appi && npm install",
-    "mobile": "react-scripts start",
-    "mobile-device": "cross-env REACT_APP_MOBILE_MODE=true REACT_APP_API_PORT=8000 PORT=3003 DANGEROUSLY_DISABLE_HOST_CHECK=true react-scripts start",
-    "mobile-start": "cross-env REACT_APP_MOBILE_MODE=true REACT_APP_API_PORT=8000 PORT=3003 BROWSER=none HOST=0.0.0.0 react-scripts start"
+    "mobile": "cross-env HOST=192.168.58.253 PORT=3000 react-scripts start",
+    "mobile-device": "cross-env REACT_APP_MOBILE_MODE=true REACT_APP_API_PORT=8000 PORT=3003 DANGEROUSLY_DISABLE_HOST_CHECK=true HOST=192.168.58.253 react-scripts start",
+    "mobile-start": "cross-env REACT_APP_MOBILE_MODE=true REACT_APP_API_PORT=8000 PORT=3003 BROWSER=none HOST=192.168.58.253 react-scripts start"
   },
   "eslintConfig": {
     "extends": "react-app"

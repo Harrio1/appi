@@ -10,11 +10,11 @@ for /f "tokens=5" %%a in ('netstat -ano ^| findstr :3000') do (
 
 echo.
 echo Запуск мобильного приложения на порту 3001...
-set "HOST=localhost"
+set "HOST=192.168.58.253"
 set "PORT=3001"
 set "REACT_APP_API_PORT=8000"
 
-cross-env HOST=localhost PORT=3001 react-scripts start
+cross-env HOST=192.168.58.253 PORT=3001 react-scripts start
 
 echo.
 echo ===== ПРИЛОЖЕНИЕ ЗАПУЩЕНО ===== 

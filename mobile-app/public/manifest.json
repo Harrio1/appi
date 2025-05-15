@@ -16,6 +16,12 @@
       "src": "logo512.png",
       "type": "image/png",
       "sizes": "512x512"
+    },
+    {
+      "src": "images/agromob-logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "150x150 192x192 512x512",
+      "purpose": "any maskable"
     }
   ],
   "start_url": ".",
@@ -42,7 +48,7 @@
       "short_name": "Карта",
       "description": "Открыть карту полей",
       "url": "/",
-      "icons": [{ "src": "logo192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "images/agromob-logo.svg", "sizes": "192x192" }]
     }
   ]
 } 

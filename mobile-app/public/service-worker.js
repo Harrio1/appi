@@ -1,5 +1,5 @@
 // Имя кэша для нашего приложения
-const CACHE_NAME = 'agro-mob-v3';
+const CACHE_NAME = 'agro-mob-v4';
 const API_CACHE_NAME = 'agro-mob-api-v1';
 
 // Файлы, которые будем кэшировать при установке
@@ -9,6 +9,7 @@ const urlsToCache = [
   '/favicon.ico',
   '/logo192.png',
   '/logo512.png',
+  '/images/agromob-logo.svg',
   '/manifest.json',
   '/static/js/main.js',
   '/static/css/main.css',
@@ -69,6 +70,11 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Функция для проверки является ли запрос навигационным
+const isNavigationRequest = (request) => {
+  return request.mode === 'navigate';
+};
+
 // Обработка запросов и возврат данных из кэша (или сети, если в кэше нет)
 self.addEventListener('fetch', (event) => {
   // Игнорируем все запросы к chrome-extension
@@ -79,6 +85,13 @@ self.addEventListener('fetch', (event) => {
   // Проверяем, можно ли кэшировать запрос (исключаем chrome-extension и другие схемы)
   if (!isCacheableRequest(event.request)) {
     console.log('Пропускаем некэшируемый запрос:', event.request.url);
+    return;
+  }
+  
+  // Предотвращаем обработку навигационных запросов, чтобы избежать бесконечной перезагрузки
+  // Это позволяет браузеру обрабатывать навигацию обычным способом
+  if (isNavigationRequest(event.request)) {
+    console.log('Пропускаем навигационный запрос:', event.request.url);
     return;
   }
   

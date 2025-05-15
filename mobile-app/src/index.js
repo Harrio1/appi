@@ -20,12 +20,26 @@ document.addEventListener('gesturestart', function(event) {
   event.preventDefault();
 });
 
+// Флаг для отслеживания обновления service worker
+let refreshing = false;
+
+// Обработчик контролирующего service worker
+const handleControllerChange = () => {
+  if (refreshing) return;
+  refreshing = true;
+  console.log('Service Worker обновлен, но страница не будет перезагружена автоматически');
+  // Вместо window.location.reload() просто выводим сообщение
+};
+
 // Регистрируем сервис-воркер
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {
     try {
       const registration = await navigator.serviceWorker.register('/service-worker.js');
       console.log('ServiceWorker успешно зарегистрирован:', registration.scope);
+      
+      // Добавляем обработчик события controllerchange
+      navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
       
       // Настраиваем слушатели состояния сети
       ApiService.setupNetworkListeners();

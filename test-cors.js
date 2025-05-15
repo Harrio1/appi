@@ -5,8 +5,8 @@ async function testCorsConnection() {
   console.log('===== ТЕСТИРОВАНИЕ CORS СОЕДИНЕНИЯ ДЛЯ МОБИЛЬНОГО ПРИЛОЖЕНИЯ =====');
   
   // Hard-coded to match exact origin in allowedOrigins
-  const origin = 'http:// 192.168.1.110:3000';
-  const serverIP = ' 192.168.1.110';
+  const origin = 'http:// 192.168.1.103:3000';
+  const serverIP = ' 192.168.1.103';
   const apiPort = 8000;
   
   console.log(`Используется фиксированный Origin заголовок: ${origin}`);

@@ -1,7 +1,7 @@
 @echo off
-echo Запуск мобильного приложения на localhost
+echo Запуск мобильного приложения на 192.168.58.253
 
-SET HOST=localhost
+SET HOST=192.168.58.253
 SET PORT=3000
 
 REM Проверка API сервера перед запуском

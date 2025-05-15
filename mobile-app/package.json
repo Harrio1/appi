@@ -18,12 +18,12 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "cross-env HOST=localhost PORT=3000 react-scripts start",
-    "start:3001": "cross-env HOST=localhost PORT=3001 react-scripts start",
+    "start": "cross-env HOST=192.168.1.103 PORT=3000 react-scripts start",
+    "start:3001": "cross-env HOST=192.168.1.103 PORT=3001 react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "start:ip": "set HOST=localhost&&set PORT=3000&&react-scripts start"
+    "start:ip": "set HOST=192.168.1.103&&set PORT=3000&&react-scripts start"
   },
   "eslintConfig": {
     "extends": [

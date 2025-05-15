@@ -25,22 +25,9 @@ const checkServerAvailability = async (url) => {
   }
 };
 
-// Определяем IP адрес API сервера с возможностью переключения
-let apiHost;
-
-// В production версии (на телефоне) пробуем разные IP-адреса
-if (process.env.NODE_ENV === 'production') {
-  apiHost = ' 192.168.1.110'; // IP вашего сервера
-  baseUrl = `http://${apiHost}:${apiPort}/api`;
-} else {
-  // В режиме разработки пробуем использовать localhost
-  if (window.location.hostname === 'localhost') {
-    apiHost = 'localhost';
-  } else {
-    apiHost = window.location.hostname; // Используем текущий хост
-  }
-  baseUrl = `http://${apiHost}:${apiPort}/api`;
-}
+// Используем фиксированный IP адрес сервера
+const apiHost = '192.168.1.103';
+baseUrl = `http://${apiHost}:${apiPort}/api`;
 
 // Логируем API URL при запуске для отладки
 console.log('API URL настроен как:', baseUrl);
@@ -52,13 +39,13 @@ export const API_URL = baseUrl;
 // Создаем экземпляр axios с подходящими настройками для CORS
 export const apiClient = axios.create({
   baseURL: baseUrl,
-  timeout: 5000,
+  timeout: 15000, // Увеличиваем таймаут до 15 секунд
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
     'Cache-Control': 'no-cache'
   },
-  withCredentials: true
+  withCredentials: false
 });
 
 // Добавляем перехватчик для вывода информации о запросах
@@ -143,6 +130,38 @@ export const fetchData = async (endpoint) => {
     return response;
   } catch (error) {
     console.error(`Ошибка при запросе ${endpoint}:`, error);
+    throw error;
+  }
+};
+
+// Добавляем функцию для прямого обращения к API, минуя все промежуточные слои
+export const directApiRequest = async (endpoint) => {
+  try {
+    console.log('Выполняется прямой запрос к API...');
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+    const url = `http://192.168.1.103:8000/${cleanEndpoint}`;
+    
+    console.log('URL запроса:', url);
+    
+    const response = await axios({
+      method: 'GET',
+      url: url,
+      timeout: 15000, // Увеличиваем таймаут до 15 секунд
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      withCredentials: false
+    });
+    
+    console.log('Успешный ответ:', response.status);
+    return response.data;
+  } catch (error) {
+    console.error('Ошибка прямого запроса:', error.message);
+    if (error.response) {
+      console.error('Код ответа:', error.response.status);
+      console.error('Данные ответа:', error.response.data);
+    }
     throw error;
   }
 };

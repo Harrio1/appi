@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import L from 'leaflet';
-import { MapContainer, TileLayer, ZoomControl, Polygon, Tooltip, Marker } from "react-leaflet";
+import { MapContainer, TileLayer, ZoomControl, Polygon, Tooltip, Marker, Popup } from "react-leaflet";
 // Используем новые сервисы для оффлайн режима
 import ApiService from '../utils/apiService';
 import '../css/MobileMap.css';
@@ -40,6 +40,18 @@ const MobileMap = () => {
   const [lastSyncTime, setLastSyncTime] = useState('Никогда');
   // Состояние для подсказки
   const [showHelpTip, setShowHelpTip] = useState(false);
+  // Цвета для типов культур, совпадающие с основным проектом
+  const [fieldColors, setFieldColors] = useState({
+    'Пшеница': 'gold',
+    'Кукуруза': 'yellow',
+    'Соя': 'green',
+    'Подсолнечник': 'orange',
+    'Рапс': 'lightgreen',
+    'Ячмень': 'beige',
+    'Овес': 'lightyellow',
+    'Рис': 'lightblue',
+    'Гречиха': 'brown'
+  });
   
   const basemapsDict = {
     osm: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -67,6 +79,15 @@ const MobileMap = () => {
       filtered = filtered.filter(polygon => 
         polygon.field_type === selectedCropType
       );
+    }
+    
+    // Логирование для отладки
+    if (currentSeasonId) {
+      console.log(`Отображение полей для сезона ID: ${currentSeasonId}`);
+      const fieldTypesInSeason = filtered
+        .map(polygon => polygon.field_type)
+        .filter((value, index, self) => self.indexOf(value) === index);
+      console.log('Типы культур в текущем сезоне:', fieldTypesInSeason);
     }
     
     setFilteredPolygons(filtered);
@@ -166,6 +187,23 @@ const MobileMap = () => {
       const data = await ApiService.fetchCrops(forceOffline);
       if (isMounted.current) {
         setCrops(data);
+        
+        // Обновляем цвета полей на основе полученных данных о культурах
+        if (data && data.length > 0) {
+          // Создаем новый объект для цветов
+          const newFieldColors = { ...fieldColors };
+          
+          // Обновляем цвета из данных API
+          data.forEach(crop => {
+            if (crop.name && crop.color) {
+              newFieldColors[crop.name] = crop.color;
+            }
+          });
+          
+          // Устанавливаем обновленные цвета
+          setFieldColors(newFieldColors);
+          console.log('Обновлены цвета культур:', newFieldColors);
+        }
       }
     } catch (error) {
       console.error('Ошибка при загрузке культур:', error);
@@ -368,21 +406,75 @@ const MobileMap = () => {
 
     try {
       console.log('Загружаем поля для сезона:', seasonId);
-      const data = await ApiService.fetchFieldsForSeason(seasonId, isOfflineMode);
+      // Получаем поля для выбранного сезона
+      const seasonFieldsData = await ApiService.fetchFieldsForSeason(seasonId, isOfflineMode);
       
-      // Обработка данных полей
-      const processedPolygons = data.map(field => {
-        let coordinates = field.coordinates;
-        if (coordinates && !Array.isArray(coordinates[0][0])) {
-          coordinates = [coordinates];
+      // Также загрузим все поля для обеспечения полного списка
+      const allFieldsData = await ApiService.fetchFields(isOfflineMode);
+      
+      console.log('Данные полей для сезона:', seasonFieldsData);
+      console.log('Все данные полей:', allFieldsData);
+      
+      // Обрабатываем поля, устанавливая правильные типы культур из сезона
+      const processedPolygons = allFieldsData.map(field => {
+        // Ищем соответствующее поле в данных сезона
+        const seasonField = seasonFieldsData.find(f => f.id === field.id);
+        
+        // Копируем поле и обновляем его свойства
+        const processedField = { ...field };
+        
+        // Устанавливаем тип культуры из данных сезона, если поле найдено
+        if (seasonField) {
+          processedField.field_type = seasonField.seed_name || seasonField.field_type || field.field_type || 'Неизвестно';
         }
-        return {
-          ...field,
-          coordinates: coordinates
-        };
+        
+        // Обрабатываем координаты
+        let coordinates = field.coordinates;
+        
+        try {
+          // Если координаты не в правильном формате, преобразуем их
+          if (coordinates) {
+            // Проверяем, если координаты - строка, пытаемся распарсить JSON
+            if (typeof coordinates === 'string') {
+              try {
+                coordinates = JSON.parse(coordinates);
+              } catch (e) {
+                console.error(`Ошибка парсинга координат из JSON:`, e);
+                coordinates = [];
+              }
+            }
+            
+            // Убеждаемся, что координаты в правильном формате [[[lon,lat],...]]
+            if (Array.isArray(coordinates)) {
+              // Если координаты не имеют правильной вложенности
+              if (coordinates.length > 0) {
+                if (!Array.isArray(coordinates[0])) {
+                  // Формат [lon,lat] -> [[[lon,lat]]]
+                  coordinates = [[coordinates]];
+                } else if (!Array.isArray(coordinates[0][0])) {
+                  // Формат [[lon,lat], [lon,lat]] -> [[[lon,lat], [lon,lat]]]
+                  coordinates = [coordinates];
+                }
+              } else {
+                coordinates = [];
+              }
+            } else {
+              coordinates = [];
+            }
+          } else {
+            coordinates = [];
+          }
+        } catch (error) {
+          console.error(`Ошибка при обработке координат:`, error);
+          coordinates = [];
+        }
+        
+        processedField.coordinates = coordinates;
+        return processedField;
       });
       
       if (isMounted.current) {
+        console.log('Обработанные полигоны для сезона:', processedPolygons);
         setPolygons(processedPolygons);
         setFilteredPolygons(processedPolygons);
       }
@@ -405,7 +497,22 @@ const MobileMap = () => {
   };
 
   const handleCropTypeChange = (e) => {
-    setSelectedCropType(e.target.value);
+    const newCropType = e.target.value;
+    
+    // Если выбран сезон, проверяем, посажена ли культура в этом сезоне
+    if (currentSeasonId) {
+      // Получаем список посаженных культур в текущем сезоне
+      const plantedCropTypes = [...new Set(filteredPolygons
+        .map(polygon => polygon.field_type)
+        .filter(type => type && type !== 'Неизвестно'))];
+      
+      // Проверяем, есть ли выбранная культура среди посаженных
+      if (newCropType && !plantedCropTypes.includes(newCropType)) {
+        alert(`Внимание: Культура "${newCropType}" не была посажена в выбранном сезоне.`);
+      }
+    }
+    
+    setSelectedCropType(newCropType);
   };
 
   const toggleInterface = () => {
@@ -422,11 +529,31 @@ const MobileMap = () => {
   };
 
   const renderCropOptions = () => {
-    // Создаем опции из уникальных типов культур
-    const uniqueTypes = [...new Set(crops.map(crop => crop.name))];
-    return uniqueTypes.map(type => (
-      <option key={type} value={type}>
-        {type}
+    // Всегда используем все доступные культуры
+    const allCropTypes = crops.map(crop => crop.name);
+    
+    // Для текущего сезона определяем, какие культуры фактически посажены
+    const plantedCropTypes = currentSeasonId 
+      ? [...new Set(filteredPolygons
+          .map(polygon => polygon.field_type)
+          .filter(type => type && type !== 'Неизвестно'))]
+      : [];
+    
+    console.log('Все типы культур:', allCropTypes);
+    console.log('Посаженные культуры в текущем сезоне:', plantedCropTypes);
+    
+    // Создаем опции из всех типов культур
+    return allCropTypes.map(type => (
+      <option 
+        key={type} 
+        value={type} 
+        style={{
+          backgroundColor: fieldColors[type] || 'white',
+          // Если сезон выбран и культура не посажена, делаем текст серым
+          color: currentSeasonId && !plantedCropTypes.includes(type) ? 'gray' : 'black'
+        }}
+      >
+        {type}{currentSeasonId && !plantedCropTypes.includes(type) ? ' (не посажена)' : ''}
       </option>
     ));
   };
@@ -435,6 +562,15 @@ const MobileMap = () => {
   const renderPolygons = () => {
     // Если нет данных полигонов, показываем сообщение
     if (filteredPolygons.length === 0) {
+      // Проверяем, есть ли выбранный тип культуры
+      if (selectedCropType) {
+        return (
+          <div className="no-polygons-message">
+            <p>Нет полей с культурой "{selectedCropType}" {currentSeasonId ? 'в выбранном сезоне' : ''}</p>
+          </div>
+        );
+      }
+      
       console.log('Нет полигонов для отображения');
       return (
         <div className="no-polygons-message">
@@ -547,37 +683,54 @@ const MobileMap = () => {
 
       // Цвет в зависимости от типа культуры
       const getColor = () => {
-        switch(polygon.field_type) {
-          case 'Пшеница': return 'yellow';
-          case 'Кукуруза': return 'orange';
-          case 'Подсолнечник': return 'gold';
-          case 'Соя': return 'green';
-          case 'Рапс': return 'blue';
-          default: return 'red'; // Делаем красным по умолчанию для лучшей видимости
+        // Используем цвета из состояния fieldColors
+        if (polygon.field_type && fieldColors[polygon.field_type]) {
+          return fieldColors[polygon.field_type];
         }
+        // Если цвет не найден, возвращаем красный по умолчанию
+        return 'red';
       };
 
-      // Устанавливаем стиль как на скриншоте - красные контуры полигонов
+      // Получаем цвет для поля
+      const fieldColor = getColor();
+      const hasFieldType = polygon.field_type && polygon.field_type !== 'Неизвестно';
+
+      // Устанавливаем стиль полигона
       return (
         <React.Fragment key={`fragment-${polygon.id}`}>
           <Polygon 
             key={`polygon-${polygon.id}`} 
             positions={coordinates}
             pathOptions={{ 
-              fillColor: 'transparent',
+              fillColor: hasFieldType ? fieldColor : 'transparent',
               weight: 1.5,
               opacity: 1,
               color: 'red',
-              fillOpacity: 0.05
+              fillOpacity: hasFieldType ? 0.5 : 0.05
             }}
           >
             <Tooltip permanent direction="center" className="polygon-tooltip">
-              <span>{polygon.name || polygon.id}</span>
+              <span>{polygon.name || polygon.id}{polygon.field_type ? ` (${polygon.field_type})` : ''}</span>
             </Tooltip>
+            <Popup className="field-popup">
+              <div className="field-popup-content">
+                <p><strong>Имя полигона:</strong> {polygon.name || polygon.id}</p>
+                <p><strong>Тип поля:</strong> {polygon.field_type || 'Не задан'}</p>
+                <p><strong>Площадь:</strong> {formatArea(polygon.area)}</p>
+              </div>
+            </Popup>
           </Polygon>
         </React.Fragment>
       );
     });
+  };
+
+  // Функция для форматирования площади с разделением разрядов
+  const formatArea = (area) => {
+    if (!area) return 'Не указана';
+    // Форматируем число с разделением разрядов
+    const formattedArea = Number(area).toLocaleString('ru-RU');
+    return `${formattedArea} кв.м`;
   };
 
   return (
@@ -637,6 +790,11 @@ const MobileMap = () => {
                 <option value="">Все культуры</option>
                 {renderCropOptions()}
               </select>
+              {selectedCropType && (
+                <div className="filter-stats">
+                  Найдено полей: {filteredPolygons.length}
+                </div>
+              )}
             </div>
             
             <div className="filter-group">

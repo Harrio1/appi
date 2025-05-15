@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#007bff" />
     <meta name="description" content="Мобильное приложение для агрономов" />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/images/agromob-logo.svg" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     
     <!-- Добавляем стили Leaflet -->
@@ -48,7 +48,7 @@
         margin-top: 20px;
         font-size: 24px;
         font-weight: bold;
-        color: #007bff;
+        color: #4CAF50;
       }
       
       @keyframes pulse {
@@ -63,7 +63,7 @@
     
     <!-- Экран загрузки для PWA -->
     <div class="splash-screen" id="splash">
-      <img src="%PUBLIC_URL%/logo192.png" alt="АгроМоб" class="splash-logo">
+      <img src="%PUBLIC_URL%/images/agromob-logo.svg" alt="АгроМоб" class="splash-logo">
       <div class="splash-title">АгроМоб</div>
     </div>
     
@@ -88,33 +88,32 @@
       // Регистрируем сервис-воркер для PWA
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
-          // Переменная для отслеживания перезагрузки страницы
-          let hasReloaded = sessionStorage.getItem('hasReloaded') === 'true';
+          // Отключаем автоматическую перезагрузку при обновлении сервис-воркера
+          // Вместо этого будем показывать уведомление
+          let disableAutoReload = true;
           
           navigator.serviceWorker.register('/service-worker.js')
             .then(function(registration) {
               console.log('ServiceWorker регистрация успешна:', registration.scope);
               
-              // Обновление сервис-воркера при необходимости
+              // Обработчик для обновления сервис-воркера
               registration.onupdatefound = function() {
                 const installingWorker = registration.installing;
                 if (installingWorker) {
                   installingWorker.onstatechange = function() {
                     if (installingWorker.state === 'installed') {
                       if (navigator.serviceWorker.controller) {
-                        console.log('Новый контент доступен; обновление страницы...');
-                        // Перезагружаем страницу только один раз при обновлении сервис-воркера
-                        if (!hasReloaded) {
-                          sessionStorage.setItem('hasReloaded', 'true');
-                          // Отложенная перезагрузка, чтобы избежать петли
-                          setTimeout(function() {
-                            window.location.reload();
-                          }, 1000);
+                        console.log('Новый контент доступен, но автоматическое обновление отключено');
+                        
+                        // Создаем уведомление о доступном обновлении вместо перезагрузки
+                        if (disableAutoReload) {
+                          // Здесь можно добавить код для отображения уведомления о доступном обновлении
+                          // Например, показать небольшой баннер внизу экрана
+                          const event = new CustomEvent('serviceWorkerUpdated');
+                          window.dispatchEvent(event);
                         }
                       } else {
                         console.log('Контент кэширован для использования в оффлайн режиме.');
-                        // Сбрасываем флаг перезагрузки, так как это первая установка
-                        sessionStorage.removeItem('hasReloaded');
                       }
                     }
                   };
@@ -134,6 +133,15 @@
           navigator.serviceWorker.addEventListener('message', function(event) {
             if (event.data && event.data.type === 'API_CACHE_CLEARED') {
               console.log('Кэш API был очищен в:', new Date(event.data.timestamp).toLocaleString());
+            }
+          });
+          
+          // Предотвращаем автоматический контроль новых сервис-воркеров над страницей
+          // без пользовательского согласия
+          navigator.serviceWorker.addEventListener('controllerchange', function() {
+            if (disableAutoReload) {
+              console.log('Service Worker обновлен, но страница не будет перезагружена автоматически');
+              // Не делаем window.location.reload();
             }
           });
         });

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+  <defs>
+    <style>
+      .dark-green {
+        fill: #0A4D1A;
+      }
+      .light-green-1 {
+        fill: #7BB93B;
+      }
+      .light-green-2 {
+        fill: #88C250;
+      }
+      .light-green-3 {
+        fill: #94CC60;
+      }
+      .background {
+        fill: #F8F8E9;
+      }
+    </style>
+  </defs>
+  <rect class="background" x="0" y="0" width="500" height="500" opacity="0.1"/>
+  <g>
+    <!-- Темно-зеленый маркер метки -->
+    <path class="dark-green" d="M250,50 C167.5,50 100,117.5 100,200 C100,235 115,270 140,295 L250,470 L360,295 C385,270 400,235 400,200 C400,117.5 332.5,50 250,50 Z"/>
+    
+    <!-- Светло-зеленый круг внутри -->
+    <circle class="background" cx="250" cy="200" r="120"/>
+    
+    <!-- Полоски полей (зеленые волны) -->
+    <path class="light-green-1" d="M250,300 C200,300 150,280 100,250 C150,280 200,290 250,290 C300,290 350,280 400,250 C350,280 300,300 250,300 Z"/>
+    <path class="light-green-2" d="M250,275 C200,275 150,255 100,225 C150,255 200,265 250,265 C300,265 350,255 400,225 C350,255 300,275 250,275 Z"/>
+    <path class="light-green-3" d="M250,250 C200,250 150,230 100,200 C150,230 200,240 250,240 C300,240 350,230 400,200 C350,230 300,250 250,250 Z"/>
+  </g>
+  
+  <!-- Зеленый овал подставки внизу -->
+  <ellipse class="light-green-2" cx="250" cy="470" rx="50" ry="10"/>
+</svg> 

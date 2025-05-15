@@ -1,5 +1,5 @@
 import axios from 'axios';
-import API_URL, { handleRateLimitedRequest, apiClient } from './apiConfig';
+import API_URL, { handleRateLimitedRequest, apiClient, directApiRequest } from './apiConfig';
 import StorageService from './storageService';
 
 // Проверка состояния сети
@@ -9,16 +9,37 @@ const isOnline = () => {
 
 // Отслеживание изменения состояния сети
 export const setupNetworkListeners = () => {
+  // Флаг для предотвращения множественных обработок изменения состояния сети
+  let processingNetworkChange = false;
+  
   window.addEventListener('online', async () => {
+    // Предотвращаем множественную обработку
+    if (processingNetworkChange) return;
+    processingNetworkChange = true;
+    
     console.log('Подключение к сети восстановлено');
     await StorageService.saveNetworkState(true);
     // При восстановлении соединения можно вызвать синхронизацию
     // syncData();
+    
+    // Разрешаем следующую обработку через небольшую задержку
+    setTimeout(() => {
+      processingNetworkChange = false;
+    }, 500);
   });
 
   window.addEventListener('offline', async () => {
+    // Предотвращаем множественную обработку
+    if (processingNetworkChange) return;
+    processingNetworkChange = true;
+    
     console.log('Соединение с сетью потеряно. Переход в оффлайн режим.');
     await StorageService.saveNetworkState(false);
+    
+    // Разрешаем следующую обработку через небольшую задержку
+    setTimeout(() => {
+      processingNetworkChange = false;
+    }, 500);
   });
 };
 
@@ -97,24 +118,73 @@ export const fetchDataWithOfflineSupport = async (endpoint, storeName, forceOnli
   }
 };
 
-// Специализированные методы для каждого типа данных
-export const fetchFields = async (forceOffline = false) => {
+// Функция для получения полей
+export const fetchFields = async () => {
   try {
-    const data = await fetchDataWithOfflineSupport('fields', StorageService.STORES.FIELDS, forceOffline);
-    // Форматируем данные полей для корректного отображения
-    return formatFieldsData(data);
+    console.log('Выполняется запрос к API для получения полей...');
+    
+    // Пробуем прямой запрос
+    try {
+      const fields = await directApiRequest('fields');
+      console.log('Получено полей:', fields.length);
+      return fields;
+    } catch (error) {
+      console.error('Ошибка при прямом запросе полей, использую старый метод', error);
+      
+      // Если прямой запрос не сработал, пробуем стандартный метод
+      const response = await apiClient.get('fields');
+      return response.data;
+    }
   } catch (error) {
-    console.error('Ошибка при получении полей:', error);
+    console.error('Ошибка при загрузке полей:', error);
     throw error;
   }
 };
 
-export const fetchSeasons = async (forceOffline = false) => {
-  return fetchDataWithOfflineSupport('seasons', StorageService.STORES.SEASONS, forceOffline);
+// Функция для получения сезонов
+export const fetchSeasons = async () => {
+  try {
+    console.log('Выполняется запрос к API для получения сезонов...');
+    
+    // Пробуем прямой запрос
+    try {
+      const seasons = await directApiRequest('seasons');
+      console.log('Получено сезонов:', seasons.length);
+      return seasons;
+    } catch (error) {
+      console.error('Ошибка при прямом запросе сезонов, использую старый метод', error);
+      
+      // Если прямой запрос не сработал, пробуем стандартный метод
+      const response = await apiClient.get('seasons');
+      return response.data;
+    }
+  } catch (error) {
+    console.error('Ошибка при загрузке сезонов:', error);
+    throw error;
+  }
 };
 
-export const fetchCrops = async (forceOffline = false) => {
-  return fetchDataWithOfflineSupport('seeds', StorageService.STORES.CROPS, forceOffline);
+// Функция для получения культур
+export const fetchCrops = async () => {
+  try {
+    console.log('Выполняется запрос к API для получения культур...');
+    
+    // Пробуем прямой запрос
+    try {
+      const crops = await directApiRequest('seeds');
+      console.log('Получено культур:', crops.length);
+      return crops;
+    } catch (error) {
+      console.error('Ошибка при прямом запросе культур, использую старый метод', error);
+      
+      // Если прямой запрос не сработал, пробуем стандартный метод
+      const response = await apiClient.get('seeds');
+      return response.data;
+    }
+  } catch (error) {
+    console.error('Ошибка при загрузке культур:', error);
+    throw error;
+  }
 };
 
 export const fetchFieldsForSeason = async (seasonId, forceOffline = false) => {

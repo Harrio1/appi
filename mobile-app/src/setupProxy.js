@@ -6,7 +6,7 @@ module.exports = function(app) {
   
   // Настройка прокси для API-запросов с префиксом /api
   const apiProxy = createProxyMiddleware({
-    target: 'http://localhost:8000',  // API сервер (исправлена ошибка с пробелами)
+    target: 'http://localhost:8000',  // API сервер
     changeOrigin: true,
     secure: false,
     logLevel: 'debug',

@@ -1,61 +1,59 @@
 @echo off
-echo ===== ЗАПУСК API-СЕРВЕРА И REACT-ПРИЛОЖЕНИЯ =====
+setlocal enabledelayedexpansion
 
-REM Переходим в корневую директорию проекта
-cd /d C:\laragon\www\appi
-
-REM Останавливаем уже запущенные процессы на портах 8000, 3003 и 3000
-echo Проверяем и завершаем процессы на порту 8000...
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8000') do (
-    echo Найден процесс %%a, использующий порт 8000. Завершение...
-    taskkill /F /PID %%a >nul 2>&1
-    timeout /t 1 >nul
-)
-
-echo Проверяем и завершаем процессы на порту 3003...
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr :3003') do (
-    echo Найден процесс %%a, использующий порт 3003. Завершение...
-    taskkill /F /PID %%a >nul 2>&1
-    timeout /t 1 >nul
-)
-
-echo Проверяем и завершаем процессы на порту 3000...
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr :3000') do (
-    echo Найден процесс %%a, использующий порт 3000. Завершение...
-    taskkill /F /PID %%a >nul 2>&1
-    timeout /t 1 >nul
-)
-
-REM Запускаем API-сервер
-echo Запуск API-сервера на порту 8000...
-start "API Server" cmd /k "node server.mjs"
-
-REM Даём серверу время на запуск
-echo Ожидание запуска API-сервера...
-timeout /t 3 >nul
-
-REM Проверяем, что API-сервер запущен
-curl -s http://127.0.0.1:8000/api/health >nul 2>&1
-if %ERRORLEVEL% NEQ 0 (
-    echo ОШИБКА: API-сервер не запустился! Проверьте ошибки в консоли сервера.
-    echo Убедитесь, что порт 8000 освобожден.
-    goto :eof
-)
-
-echo API-сервер успешно запущен на 127.0.0.1:8000!
-
-REM Тестируем соединение с API
-echo Проверка соединения с API...
-node map/test-api.js
-
-REM Запускаем React-приложение
+echo ==============================================
+echo        Запуск сервера и мобильного приложения
+echo ==============================================
 echo.
-echo Запуск React-приложения на порту 3003...
-cd map
-set "REACT_APP_API_PORT=8000"
 
-REM Запускаем приложение
-echo Запуск React с использованием IPv4 для подключения к API...
-npm run dev
+set "IP_ADDRESS=192.168.58.253"
+set "SERVER_PORT=3003"
+set "MOBILE_PORT=3000"
 
-echo =====  ПРОЦЕСС ЗАВЕРШЕН ===== 
+echo IP адрес: %IP_ADDRESS%
+echo Порт сервера: %SERVER_PORT%
+echo Порт мобильного приложения: %MOBILE_PORT%
+echo.
+
+echo Проверка доступности портов...
+netstat -an | findstr ":%SERVER_PORT% "
+if %errorlevel% equ 0 (
+    echo Порт %SERVER_PORT% уже используется. Пожалуйста, закройте приложение, использующее этот порт.
+    choice /C YN /M "Продолжить запуск (Y/N)?"
+    if errorlevel 2 goto :end
+)
+
+netstat -an | findstr ":%MOBILE_PORT% "
+if %errorlevel% equ 0 (
+    echo Порт %MOBILE_PORT% уже используется. Пожалуйста, закройте приложение, использующее этот порт.
+    choice /C YN /M "Продолжить запуск (Y/N)?"
+    if errorlevel 2 goto :end
+)
+
+echo.
+echo Запуск сервера на %IP_ADDRESS%:%SERVER_PORT%...
+
+start "API Server" cmd /c "cd map && cross-env HOST=%IP_ADDRESS% PORT=%SERVER_PORT% node server.js"
+
+echo.
+echo Сервер запущен! Ожидаем 5 секунд для инициализации...
+timeout /t 5 /nobreak > nul
+
+echo.
+echo Запуск мобильного приложения на %IP_ADDRESS%:%MOBILE_PORT%...
+
+start "Mobile App" cmd /c "cd mobile-app && cross-env HOST=%IP_ADDRESS% PORT=%MOBILE_PORT% npm start"
+
+echo.
+echo ==============================================
+echo  Сервер и мобильное приложение запущены!
+echo ==============================================
+echo.
+echo Сервер доступен по адресу: http://%IP_ADDRESS%:%SERVER_PORT%
+echo Мобильное приложение доступно по адресу: http://%IP_ADDRESS%:%MOBILE_PORT%
+echo.
+echo Нажмите любую клавишу для выхода из этого окна (это НЕ остановит приложения)...
+pause > nul
+
+:end
+endlocal 
