@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+  <defs>
+    <style>
+      .dark-green {
+        fill: #0F4D2A;
+      }
+      .light-green {
+        fill: #7AB547;
+      }
+      .bg {
+        fill: #FFFBEE;
+        opacity: 0;
+      }
+    </style>
+  </defs>
+  <rect class="bg" width="500" height="500" />
+  <g>
+    <path class="dark-green" d="M250,180c-88.4,0-160,71.6-160,160c0,88.4,160,160,160,160s160-71.6,160-160C410,251.6,338.4,180,250,180z M250,450c-60.7,0-110-49.3-110-110s49.3-110,110-110s110,49.3,110,110S310.7,450,250,450z"/>
+    <path class="light-green" d="M330,340c-5-40-35-80-80-80s-75,40-80,80c-25,0-40,10-40,10s55,40,120,40s120-40,120-40S355,340,330,340z"/>
+    <path class="light-green" d="M310,320c0,0-20-30-60-30s-60,30-60,30c-20,0-30,5-30,5s40,25,90,25s90-25,90-25S330,320,310,320z"/>
+    <path class="light-green" d="M290,300c0,0-15-20-40-20s-40,20-40,20c-15,0-20,0-20,0s25,15,60,15s60-15,60-15S305,300,290,300z"/>
+    <ellipse class="light-green" cx="250" cy="470" rx="50" ry="10"/>
+  </g>
+</svg> 

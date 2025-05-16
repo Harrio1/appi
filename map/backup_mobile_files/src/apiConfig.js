@@ -1,12 +1,23 @@
 /**
- * Конфигурация API
+ * Конфигурация API для мобильного приложения
+ * Этот файл обеспечивает совместимость между разными режимами работы
  */
 
+// Универсальный конфигурационный файл для API
+// Поддерживает как десктопный, так и мобильный режимы
 import axios from 'axios';
 
+// Получаем порт API сервера из переменных окружения
+// Используем порт 8000 для API-сервера
+const apiPort = process.env.REACT_APP_API_PORT || '8000';
+const mobileMode = process.env.REACT_APP_MOBILE_MODE === 'true';
+
 // Определение хоста для API запросов
-const apiHost = '127.0.0.1'; // Фиксированный IPv4 адрес
-const apiPort = '8000';
+let apiHost = '127.0.0.1'; // Фиксированный IPv4 адрес
+if (mobileMode) {
+  // В мобильном режиме используем IP устройства
+  apiHost = window.location.hostname;
+}
 
 // Формирование базового URL для API без завершающего слеша
 let baseUrl;
@@ -22,6 +33,7 @@ if (process.env.NODE_ENV === 'development') {
   console.log('[apiConfig] Используем полный URL для production');
 }
 
+console.log('[apiConfig] Режим API:', mobileMode ? 'Мобильный' : 'Десктоп');
 console.log('[apiConfig] Используемый хост:', apiHost);
 console.log('[apiConfig] Используемый порт:', apiPort);
 console.log('[apiConfig] Полный URL API:', baseUrl);
