@@ -56,11 +56,49 @@ const Sidebar = ({
     <div>
       <div className={`sidebar ${isVisible ? 'visible' : 'hidden'}`}>
         <div className="sidebar-content">
+          
+
           <h3>Управление полями</h3>
-          <button onClick={() => setPolygonModalOpen(true)}>Создание поля</button>
-          <button onClick={() => setSeasonModalOpen(true)}>Создать новый сезон</button>
-          <button onClick={() => setFieldTypeModalOpen(true)}>Добавить новую культуру</button>
+          <select onChange={handleFieldSelection} value={selectedFieldId || ''}>
+            <option value="" disabled>Выберите поле</option>
+            {fields.map((field, index) => (
+              <option key={field.id || index} value={field.id}>{field.name}</option>
+            ))}
+          </select>
+          <select onChange={handleSeasonInputChange} value={selectedSeason || ''}>
+            <option value="" disabled>Выберите сезон</option>
+            {seasons.map((season, index) => (
+              <option key={season.id || index} value={season.name}>{season.name}</option>
+            ))}
+          </select>
+
+          <div className="custom-select">
+            <div className="selected-option">
+              {selectedFieldType ? (
+                <span>
+                  <span className="color-box" style={{ backgroundColor: fieldColors[selectedFieldType] || 'black' }}></span>
+                  {selectedFieldType}
+                </span>
+              ) : 'Выберите культуру'}
+            </div>
+            <div className="options">
+              {fieldTypes.map((type, index) => (
+                <div 
+                  key={`${type}-${index}`} 
+                  className="option"
+                  onClick={() => handleFieldTypeSelection({ target: { value: type } })}
+                >
+                  <span className="color-box" style={{ backgroundColor: fieldColors[type] || 'black' }}></span>
+                  {type}
+                </div>
+              ))}
+            </div>
+          </div>
+          <button onClick={saveProperty}>Сохранить</button>
         </div>
+        <button onClick={() => setPolygonModalOpen(true)}>Открыть создание поля</button>
+          <button onClick={() => setSeasonModalOpen(true)}>Создать новый сезон</button>
+        <button onClick={() => setFieldTypeModalOpen(true)}>Добавить новую культуру</button>
       </div>
       <button className="side-button" onClick={toggleSidebar}>
         {isVisible ? '✕' : '☰'}

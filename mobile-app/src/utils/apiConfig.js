@@ -26,7 +26,7 @@ const checkServerAvailability = async (url) => {
 };
 
 // Используем фиксированный IP адрес сервера
-const apiHost = '192.168.1.103';
+const apiHost = '192.168.1.105';
 baseUrl = `http://${apiHost}:${apiPort}/api`;
 
 // Логируем API URL при запуске для отладки
@@ -139,7 +139,7 @@ export const directApiRequest = async (endpoint) => {
   try {
     console.log('Выполняется прямой запрос к API...');
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-    const url = `http://192.168.1.103:8000/${cleanEndpoint}`;
+    const url = `http://192.168.1.105:8000/${cleanEndpoint}`;
     
     console.log('URL запроса:', url);
     

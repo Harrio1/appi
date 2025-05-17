@@ -40,6 +40,8 @@ const MobileMap = () => {
   const [lastSyncTime, setLastSyncTime] = useState('Никогда');
   // Состояние для подсказки
   const [showHelpTip, setShowHelpTip] = useState(false);
+  // Состояние для компактного режима
+  const [compactMode, setCompactMode] = useState(false);
   // Цвета для типов культур, совпадающие с основным проектом
   const [fieldColors, setFieldColors] = useState({
     'Пшеница': 'gold',
@@ -156,9 +158,20 @@ const MobileMap = () => {
     loadFields();
     loadCrops();
     
+    // Проверяем размер экрана для автоматического включения компактного режима
+    const checkScreenSize = () => {
+      if (window.innerWidth < 360) {
+        setCompactMode(true);
+      }
+    };
+    
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    
     // Функция очистки при размонтировании компонента
     return () => {
       isMounted.current = false;
+      window.removeEventListener('resize', checkScreenSize);
     };
   }, []);
 
@@ -528,6 +541,10 @@ const MobileMap = () => {
     setBasemap(newBasemap);
   };
 
+  const toggleCompactMode = () => {
+    setCompactMode(!compactMode);
+  };
+
   const renderCropOptions = () => {
     // Всегда используем все доступные культуры
     const allCropTypes = crops.map(crop => crop.name);
@@ -734,77 +751,88 @@ const MobileMap = () => {
   };
 
   return (
-    <div className="mobile-map-container">
+    <div className={`mobile-map-container ${compactMode ? 'mobile-mini-interface' : ''}`}>
       {!hideInterface && (
         <div className="mobile-controls">
           <div className="mobile-header">
             <h1>АгроМоб</h1>
-            <button 
-              className="toggle-interface-btn" 
-              onClick={toggleInterface}
-              title="Скрыть интерфейс"
-            >
-              &times;
-            </button>
+            <div className="interface-controls">
+              <button 
+                onClick={toggleCompactMode}
+                className="compact-toggle-btn"
+                title={compactMode ? "Расширенный режим" : "Компактный режим"}
+              >
+                {compactMode ? "⊞" : "⊟"}
+              </button>
+              <button 
+                className="toggle-interface-btn" 
+                onClick={toggleInterface}
+                title="Скрыть интерфейс"
+              >
+                ×
+              </button>
+            </div>
           </div>
           
           <div className="offline-info">
             <div className={`connection-status ${isOfflineMode ? 'offline' : 'online'}`}>
-              {isOfflineMode ? 'Оффлайн режим' : 'Онлайн режим'}
+              {isOfflineMode ? 'Оффлайн' : 'Онлайн'}
             </div>
             <button 
               className={`toggle-offline-btn ${isOfflineMode ? 'offline' : 'online'}`} 
               onClick={toggleOfflineMode}
             >
-              {isOfflineMode ? 'Перейти в онлайн' : 'Перейти в оффлайн'}
+              {isOfflineMode ? 'В онлайн' : 'В оффлайн'}
             </button>
             <div className="last-sync">
-              Последняя синхронизация: {lastSyncTime}
+              Синхр: {lastSyncTime}
             </div>
           </div>
           
           <div className="filters">
-            <div className="filter-group">
-              <label>Сезон:</label>
-              <select 
-                className="season-select" 
-                onChange={handleSeasonChange}
-                value={currentSeasonId || ''}
-              >
-                <option value="">Все поля</option>
-                {seasons.map(season => (
-                  <option key={season.id} value={season.id}>
-                    {season.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="filter-group">
-              <label>Культура:</label>
-              <select 
-                className="crop-select" 
-                onChange={handleCropTypeChange}
-                value={selectedCropType}
-              >
-                <option value="">Все культуры</option>
-                {renderCropOptions()}
-              </select>
-              {selectedCropType && (
-                <div className="filter-stats">
-                  Найдено полей: {filteredPolygons.length}
-                </div>
-              )}
-            </div>
-            
-            <div className="filter-group">
-              <label>Поиск поля:</label>
-              <input 
-                type="text" 
-                className="search-input"
-                placeholder="Название поля..." 
-                onChange={handleSearchChange}
-              />
+            <div className="filter-row">
+              <div className="filter-group">
+                <label>Сезон:</label>
+                <select 
+                  className="season-select" 
+                  onChange={handleSeasonChange}
+                  value={currentSeasonId || ''}
+                >
+                  <option value="">Все</option>
+                  {seasons.map(season => (
+                    <option key={season.id} value={season.id}>
+                      {season.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="filter-group">
+                <label>Культура:</label>
+                <select 
+                  className="crop-select" 
+                  onChange={handleCropTypeChange}
+                  value={selectedCropType}
+                >
+                  <option value="">Все</option>
+                  {renderCropOptions()}
+                </select>
+                {selectedCropType && (
+                  <div className="filter-stats">
+                    Полей: {filteredPolygons.length}
+                  </div>
+                )}
+              </div>
+              
+              <div className="filter-group">
+                <label>Поиск:</label>
+                <input 
+                  type="text" 
+                  className="search-input"
+                  placeholder="Название..." 
+                  onChange={handleSearchChange}
+                />
+              </div>
             </div>
           </div>
           

@@ -313,6 +313,6 @@ process.on('unhandledRejection', (err) => {
 app.listen(port, '0.0.0.0', () => {
   console.log(`Сервер запущен на http://${host}:${port}`);
   console.log(`Также доступен на http://0.0.0.0:${port}`);
-  console.log(`IP интерфейсы:  192.168.1.103:${port}`);
+  console.log(`IP интерфейсы:  192.168.1.105:${port}`);
 });
 

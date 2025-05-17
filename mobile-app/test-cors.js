@@ -5,7 +5,7 @@ async function testCorsConnection() {
   console.log('===== ТЕСТИРОВАНИЕ CORS СОЕДИНЕНИЯ ДЛЯ МОБИЛЬНОГО ПРИЛОЖЕНИЯ =====');
   
   // Получаем IP адрес машины
-  const serverIP = process.env.SERVER_IP || ' 192.168.1.103'; // Измените на ваш IP
+  const serverIP = process.env.SERVER_IP || ' 192.168.1.105'; // Измените на ваш IP
   const apiPort = 8000;
   const mobilePort = 3000;
   

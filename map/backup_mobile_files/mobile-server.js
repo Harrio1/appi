@@ -81,7 +81,7 @@ const seeds = [
 
 // Важно! Конфигурация CORS с поддержкой всех источников
 const corsOptions = {
-  origin: ['http://192.168.1.103:3000', 'http://localhost:3000'], // Разрешаем запросы только из этих источников
+  origin: ['http://192.168.1.105:3000', 'http://localhost:3000'], // Разрешаем запросы только из этих источников
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Accept', 'Authorization', 'X-Requested-With', 'Cache-Control'],
   credentials: true
@@ -165,22 +165,22 @@ app.get('/seeds', (req, res) => {
 });
 
 // Запуск сервера
-app.listen(PORT, '192.168.1.103', () => {
+app.listen(PORT, '192.168.1.105', () => {
   console.log(`Мобильный API сервер запущен на порту ${PORT}`);
-  console.log(`Доступен по адресу: http://192.168.1.103:${PORT}`);
-  console.log(`Тестовый эндпоинт: http://192.168.1.103:${PORT}/api/health`);
+  console.log(`Доступен по адресу: http://192.168.1.105:${PORT}`);
+  console.log(`Тестовый эндпоинт: http://192.168.1.105:${PORT}/api/health`);
 });
-  console.log(`Доступен по адресу: http://192.168.1.103:${PORT}`);
-  console.log(`Тестовый эндпоинт: http://192.168.1.103:${PORT}/api/health`);
+  console.log(`Доступен по адресу: http://192.168.1.105:${PORT}`);
+  console.log(`Тестовый эндпоинт: http://192.168.1.105:${PORT}/api/health`);
 });
-  console.log(`Доступен по адресу: http://192.168.1.103:${PORT}`);
-  console.log(`Тестовый эндпоинт: http://192.168.1.103:${PORT}/api/health`);
+  console.log(`Доступен по адресу: http://192.168.1.105:${PORT}`);
+  console.log(`Тестовый эндпоинт: http://192.168.1.105:${PORT}/api/health`);
 });
   console.log(`Доступен по адресу: http://192.168.58.253:${PORT}`);
   console.log(`Тестовый эндпоинт: http://192.168.58.253:${PORT}/api/health`);
 });
-  console.log(`Доступен по адресу: http://192.168.1.103:${PORT}`);
-  console.log(`Тестовый эндпоинт: http://192.168.1.103:${PORT}/api/health`);
+  console.log(`Доступен по адресу: http://192.168.1.105:${PORT}`);
+  console.log(`Тестовый эндпоинт: http://192.168.1.105:${PORT}/api/health`);
 });
   console.log(`Доступен по адресу: http://192.168.58.253:${PORT}`);
   console.log(`Тестовый эндпоинт: http://192.168.58.253:${PORT}/api/health`);
